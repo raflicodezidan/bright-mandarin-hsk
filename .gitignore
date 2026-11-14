@@ -1,0 +1,19 @@
+node_modules
+.next
+out
+build
+.DS_Store
+*.pem
+npm-debug.log*
+.env
+.env.local
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Berkas/folder lain di direktori kerja yang bukan bagian aplikasi HSK.
+mockup/
+tabungan-nikah/
+PRD-Aplikasi-Tabungan.md
+PROMPT-AGENT-ANDROID.md

@@ -1,0 +1,110 @@
+import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  QuestionForm,
+  type QuestionFormInitial,
+} from "@/components/admin/tests/question-form";
+import { createClient } from "@/lib/supabase/server";
+import { signMedia } from "@/lib/storage";
+import type { Tables } from "@/lib/supabase/database.types";
+
+export const metadata = { title: "Soal" };
+
+export default async function QuestionPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string; qid: string }>;
+  searchParams: Promise<{ section?: string }>;
+}) {
+  const { id, qid } = await params;
+  const query = await searchParams;
+  const supabase = await createClient();
+
+  const test = await supabase
+    .from("tests")
+    .select("id, title")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!test.data) notFound();
+
+  const attempts = await supabase
+    .from("attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("test_id", id);
+
+  const locked = (attempts.count ?? 0) > 0;
+
+  let initial: QuestionFormInitial | undefined;
+  let existingImage: string | null = null;
+  let existingAudio: string | null = null;
+  let questionId = "new";
+
+  if (qid !== "new") {
+    const question = await supabase
+      .from("questions")
+      .select(
+        "id, test_id, section, prompt, image_path, audio_path, question_options(id, label, text), answer_keys(correct_option_id)",
+      )
+      .eq("id", qid)
+      .maybeSingle();
+
+    if (!question.data || question.data.test_id !== id) notFound();
+
+    questionId = question.data.id;
+    existingImage = question.data.image_path;
+    existingAudio = question.data.audio_path;
+
+    const options = [...(question.data.question_options ?? [])].sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
+    const correctOptionId = question.data.answer_keys?.correct_option_id;
+    const correct = options.find((option) => option.id === correctOptionId);
+
+    initial = {
+      section: question.data.section,
+      prompt: question.data.prompt,
+      options: options.map((option) => ({
+        label: option.label,
+        text: option.text,
+      })),
+      correctLabel: correct?.label ?? "A",
+    };
+  } else {
+    const section =
+      query.section === "reading" ? "reading" : ("listening" as const);
+    initial = {
+      section,
+      prompt: "",
+      options: [],
+      correctLabel: "A",
+    };
+  }
+
+  const [imageUrl, audioUrl] = await Promise.all([
+    signMedia(existingImage),
+    signMedia(existingAudio),
+  ]);
+
+  return (
+    <>
+      <PageHeader
+        title={qid === "new" ? "Tambah soal" : "Edit soal"}
+        description={test.data.title}
+      />
+      <QuestionForm
+        testId={id}
+        questionId={questionId}
+        initial={initial}
+        existingImage={existingImage}
+        existingAudio={existingAudio}
+        imageUrl={imageUrl}
+        audioUrl={audioUrl}
+        locked={locked}
+      />
+    </>
+  );
+}
+
+export type QuestionRow = Tables<"questions">;

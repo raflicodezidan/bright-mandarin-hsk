@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f0ec;
+  --color-border: #ddddd6;
+  --color-border-strong: #bdbdb3;
+  --color-text: #1a1a1a;
+  --color-text-muted: #5c5c55;
+  --color-primary: #1b3a5c;
+  --color-primary-hover: #142c47;
+  --color-primary-subtle: #e8eef4;
+  --color-accent: #b3262b;
+  --color-accent-subtle: #fbeaea;
+  --color-success: #2f6b3f;
+  --color-success-subtle: #e6f2e8;
+  --color-warning: #8a5a00;
+  --color-warning-subtle: #fff4dc;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --font-sans: var(--font-plex-sans), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --text-xs: 13px;
+  --text-xs--line-height: 18px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-question: 22px;
+  --text-question--line-height: 36px;
+  --text-option: 20px;
+  --text-option--line-height: 32px;
+  --text-stat: 28px;
+  --text-stat--line-height: 36px;
+  --text-timer: 20px;
+  --text-timer--line-height: 28px;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :lang(zh),
+  .font-cjk {
+    font-family: var(--font-noto-sc), var(--font-plex-sans), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-subtle);
+    color: var(--color-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
