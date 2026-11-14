@@ -62,11 +62,29 @@ export default async function AdminDashboardPage() {
       <PageHeader title="Dashboard" description="Ringkasan kegiatan tes." />
 
       <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Murid aktif" value={students.count ?? 0} />
-          <StatCard label="Tes terbuka" value={openTests.count ?? 0} />
-          <StatCard label="Sedang mengerjakan" value={inProgress.count ?? 0} />
-          <StatCard label="Selesai hari ini" value={finishedToday.count ?? 0} />
+        <div className="rounded-md border border-border bg-surface-muted p-4 sm:p-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="Murid aktif"
+              value={students.count ?? 0}
+              tone="success"
+            />
+            <StatCard
+              label="Tes terbuka"
+              value={openTests.count ?? 0}
+              tone="warning"
+            />
+            <StatCard
+              label="Sedang mengerjakan"
+              value={inProgress.count ?? 0}
+              tone="accent"
+            />
+            <StatCard
+              label="Selesai hari ini"
+              value={finishedToday.count ?? 0}
+              tone="primary"
+            />
+          </div>
         </div>
 
         <section className="flex flex-col gap-4">

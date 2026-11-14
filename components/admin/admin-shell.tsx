@@ -52,8 +52,8 @@ function NavList({
             className={cn(
               "flex h-10 items-center gap-3 rounded-sm px-3 text-sm transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               active
-                ? "bg-primary-hover font-medium text-white"
-                : "text-white/90 hover:bg-primary-hover/80 hover:text-white",
+                ? "bg-primary-subtle font-medium text-primary"
+                : "text-text hover:bg-surface hover:text-text",
             )}
           >
             <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -88,8 +88,8 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
 
   const brand = (
     <div className="flex flex-col">
-      <span className="text-sm font-semibold text-white">Bright Mandarin</span>
-      <span className="text-xs text-white/80">Admin</span>
+      <span className="text-sm font-semibold text-text">Bright Mandarin</span>
+      <span className="text-xs text-text-muted">Admin</span>
     </div>
   );
 
@@ -130,15 +130,15 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu admin"
-            className="relative flex h-full w-72 max-w-[85vw] flex-col bg-primary shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+            className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-border bg-surface-muted shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
           >
-            <div className="flex items-center justify-between border-b border-primary-hover px-4 py-4">
+            <div className="flex items-center justify-between border-b border-border px-4 py-4">
               {brand}
               <button
                 type="button"
                 onClick={closeDrawer}
                 aria-label="Tutup menu"
-                className="rounded-sm p-2 text-white/80 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="rounded-sm p-2 text-text-muted hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <X size={18} strokeWidth={1.5} aria-hidden="true" />
               </button>
@@ -146,13 +146,11 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
             <div className="flex-1 px-3 py-3">
               <NavList pathname={pathname} onNavigate={closeDrawer} />
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-primary-hover px-4 py-4">
-              <span className="truncate text-sm text-white">
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-4">
+              <span className="truncate text-sm text-text">
                 {userName ?? "Admin"}
               </span>
-              <div className="[&_button]:text-white [&_button]:hover:bg-primary-hover">
-                {logout}
-              </div>
+              <div>{logout}</div>
             </div>
           </div>
         </div>
