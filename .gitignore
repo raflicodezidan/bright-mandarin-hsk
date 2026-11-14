@@ -17,3 +17,6 @@ mockup/
 tabungan-nikah/
 PRD-Aplikasi-Tabungan.md
 PROMPT-AGENT-ANDROID.md
+
+# Supabase CLI (cache & metadata lokal, jangan di-commit).
+supabase/.temp/
