@@ -24,7 +24,7 @@ export function Field({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={htmlFor} className="text-xs font-medium text-text">
+      <label htmlFor={htmlFor} className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
         {label}
         {required ? (
           <span aria-hidden="true" className="ml-1 text-accent">

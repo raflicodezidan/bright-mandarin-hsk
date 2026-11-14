@@ -36,27 +36,25 @@ Ganti nilai dengan palet brand klien saat tersedia, **nama token tetap**.
 
 | Token | Hex | Pemakaian |
 |---|---|---|
-| `bg` | `#F5F5F5` | Latar halaman |
-| `surface` | `#FFFFFF` | Kartu, tabel, form, dialog |
-| `surface-muted` | `#E8E8E8` | Header tabel, area sekunder, sidebar |
-| `border` | `#D4D4D4` | Border default |
-| `border-strong` | `#B3B3B3` | Border input, pemisah penting |
-| `text` | `#1A1A1A` | Teks utama |
-| `text-muted` | `#595959` | Teks sekunder, label |
-| `primary` | `#2E7D32` | Tombol utama, link, item nav aktif, fokus |
-| `primary-hover` | `#1B5E20` | Hover tombol utama |
-| `primary-subtle` | `#D9EDDA` | Latar item nav aktif, soal terjawab |
-| `accent` | `#C0392B` | **Hemat.** Timer di bawah 5 menit, aksi destruktif, error |
-| `accent-subtle` | `#F5D4D1` | Latar alert error |
-| `success` / `success-subtle` | `#27AE60` / `#D9EDDA` | Status selesai, alert sukses |
-| `warning` / `warning-subtle` | `#D68910` / `#FDECC8` | Status berlangsung, peringatan |
+| `bg` | `#F4F3EF` | Kanvas halaman |
+| `surface` | `#F8F7F3` | Top bar, header tabel, drawer |
+| `surface-muted` | `#ECEAE3` | Sidebar |
+| `border` | `#DCD9D0` | Border dan divider |
+| `border-strong` | `#C7C3B8` | Border input |
+| `text` | `#18181B` | Teks utama |
+| `text-muted` | `#52525B` | Teks sekunder |
+| `primary` | `#18181B` | Tombol filter dan fokus netral |
+| `accent` | `#A62626` | Keluar, hapus, error |
+| `success` | `#1B5E3A` | Aksi positif dan status selesai |
+| `warning` | `#D97706` | Status proses |
+| `vermilion` | `#9E2A2B` | Monogram dan indikator menu aktif |
 
 Aturan: maksimal satu warna non-netral dominan per layar (`primary`). `accent` tidak dipakai untuk dekorasi. Status tidak boleh hanya berbeda warna; selalu ada teks.
 
 ### 3.2 Tipografi
 
-- Sans: **Poppins** (Latin) dengan fallback **Noto Sans SC** untuk karakter Mandarin, lalu `system-ui`.
-- Mono: **IBM Plex Mono** untuk timer, skor, nomor soal. Selalu `font-variant-numeric: tabular-nums`.
+- Sans: **Plus Jakarta Sans** (Latin) dengan fallback **Noto Sans SC** untuk karakter Mandarin, lalu `system-ui`.
+- Mono: **JetBrains Mono** untuk data tabular. Selalu `font-variant-numeric: tabular-nums`.
 - Muat lewat `next/font/google`. Noto Sans SC: `preload: false`, bobot 400 dan 500.
 
 | Peran | Ukuran / line-height | Bobot |
@@ -97,13 +95,13 @@ Breakpoint: `640`, `1024`.
 
 ### 3.4 Bentuk
 
-- Radius: **4px** untuk input, tombol, badge; **6px** untuk kartu, tabel, dialog. Tidak ada nilai lain.
+- Radius: **2px** untuk kontrol dan **3px** untuk kartu. Jangan gunakan radius pill.
 - Border: 1px solid `border` (kartu, tabel), `border-strong` (input).
 - Fokus: outline 2px `primary`, offset 2px, selalu terlihat. Jangan dihapus.
 
 ### 3.5 Elevasi
 
-Datar. Satu-satunya bayangan: dialog dan dropdown `0 4px 16px rgba(0,0,0,0.08)`. Backdrop dialog `rgba(26,26,26,0.4)`, tanpa blur.
+Datar tanpa shadow. Drawer dan dialog dibatasi hairline border; backdrop `rgba(0,0,0,0.2)`, tanpa blur.
 
 ### 3.6 Snippet token (Tailwind v4, `app/globals.css`)
 
@@ -111,28 +109,28 @@ Datar. Satu-satunya bayangan: dialog dan dropdown `0 4px 16px rgba(0,0,0,0.08)`.
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F5F5F5;
-  --color-surface: #FFFFFF;
-  --color-surface-muted: #E8E8E8;
-  --color-border: #D4D4D4;
-  --color-border-strong: #B3B3B3;
-  --color-text: #1A1A1A;
-  --color-text-muted: #595959;
-  --color-primary: #2E7D32;
-  --color-primary-hover: #1B5E20;
-  --color-primary-subtle: #D9EDDA;
-  --color-accent: #C0392B;
-  --color-accent-subtle: #F5D4D1;
-  --color-success: #27AE60;
-  --color-success-subtle: #D9EDDA;
-  --color-warning: #D68910;
-  --color-warning-subtle: #FDECC8;
+  --color-bg: #F4F3EF;
+  --color-surface: #F8F7F3;
+  --color-surface-muted: #ECEAE3;
+  --color-border: #DCD9D0;
+  --color-border-strong: #C7C3B8;
+  --color-text: #18181B;
+  --color-text-muted: #52525B;
+  --color-primary: #18181B;
+  --color-primary-hover: #27272A;
+  --color-primary-subtle: #E2DFD5;
+  --color-accent: #A62626;
+  --color-accent-subtle: #FDF2F2;
+  --color-success: #1B5E3A;
+  --color-success-subtle: #E6EFE8;
+  --color-warning: #D97706;
+  --color-warning-subtle: #F3ECE0;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
 
-  --font-sans: var(--font-poppins), var(--font-noto-sc), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plus-jakarta), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 ```
 

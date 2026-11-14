@@ -124,10 +124,10 @@ export default async function ResultsPage({
       <div className="flex flex-col gap-4">
         <form
           method="get"
-          className="flex flex-col gap-3 rounded-md border border-border bg-surface p-4 lg:flex-row lg:flex-wrap lg:items-end"
+          className="grid grid-cols-1 gap-3 border-b border-[#DCD9D0] pb-4 sm:grid-cols-2 lg:grid-cols-6"
         >
-          <div className="flex flex-col gap-1 lg:w-52">
-            <label htmlFor="student" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="student" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Murid
             </label>
             <Select id="student" name="student" defaultValue={filters.studentId ?? ""}>
@@ -139,8 +139,8 @@ export default async function ResultsPage({
               ))}
             </Select>
           </div>
-          <div className="flex flex-col gap-1 lg:w-56">
-            <label htmlFor="test" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="test" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Tes
             </label>
             <Select id="test" name="test" defaultValue={filters.testId ?? ""}>
@@ -152,8 +152,8 @@ export default async function ResultsPage({
               ))}
             </Select>
           </div>
-          <div className="flex flex-col gap-1 lg:w-28">
-            <label htmlFor="level" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="level" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Level
             </label>
             <Select
@@ -169,20 +169,20 @@ export default async function ResultsPage({
               ))}
             </Select>
           </div>
-          <div className="flex flex-col gap-1 lg:w-40">
-            <label htmlFor="from" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="from" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Dari tanggal
             </label>
             <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
           </div>
-          <div className="flex flex-col gap-1 lg:w-40">
-            <label htmlFor="to" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="to" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Sampai tanggal
             </label>
             <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
           </div>
-          <div className="flex flex-col gap-1 lg:w-44">
-            <label htmlFor="status" className="text-xs text-text-muted">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="status" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
               Status
             </label>
             <Select id="status" name="status" defaultValue={filters.status ?? ""}>
@@ -192,8 +192,8 @@ export default async function ResultsPage({
               <option value="expired">Waktu habis</option>
             </Select>
           </div>
-          <div className="flex items-center gap-3 pb-1">
-            <Button type="submit" variant="secondary">
+          <div className="col-span-full flex items-center gap-3">
+            <Button type="submit" variant="neutral">
               Terapkan
             </Button>
             {hasActiveFilters(filters) ? (

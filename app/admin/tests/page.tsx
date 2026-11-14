@@ -105,7 +105,7 @@ export default async function AdminTestsPage() {
                   <TestStatusBadge status={test.status} />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex min-w-[240px] items-center justify-end gap-2">
                     <DuplicateTestButton testId={test.id} title={test.title} />
                     <LinkButton
                       href={`/admin/tests/${test.id}`}

@@ -1,28 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f5f5f5;
-  --color-surface: #ffffff;
-  --color-surface-muted: #e8e8e8;
-  --color-border: #d4d4d4;
-  --color-border-strong: #b3b3b3;
-  --color-text: #1a1a1a;
-  --color-text-muted: #595959;
-  --color-primary: #2e7d32;
-  --color-primary-hover: #1b5e20;
-  --color-primary-subtle: #d9edda;
-  --color-accent: #c0392b;
-  --color-accent-subtle: #f5d4d1;
-  --color-success: #27ae60;
-  --color-success-subtle: #d9edda;
-  --color-warning: #d68910;
-  --color-warning-subtle: #fdecc8;
+  --color-bg: #f4f3ef;
+  --color-surface: #f8f7f3;
+  --color-surface-muted: #eceae3;
+  --color-border: #dcd9d0;
+  --color-border-strong: #c7c3b8;
+  --color-text: #18181b;
+  --color-text-muted: #52525b;
+  --color-primary: #18181b;
+  --color-primary-hover: #27272a;
+  --color-primary-subtle: #e2dfd5;
+  --color-accent: #a62626;
+  --color-accent-subtle: #fdf2f2;
+  --color-success: #1b5e3a;
+  --color-success-subtle: #e6efe8;
+  --color-warning: #d97706;
+  --color-warning-subtle: #f3ece0;
+  --color-paper: #faf9f6;
+  --color-forest: #1b5e3a;
+  --color-forest-hover: #14472c;
+  --color-vermilion: #9e2a2b;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
 
-  --font-sans: var(--font-poppins), var(--font-noto-sc), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plus-jakarta), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   --text-xs: 13px;
   --text-xs--line-height: 18px;
@@ -63,9 +67,19 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  article,
+  [role="dialog"] {
+    border-radius: 2px;
+  }
+
   :lang(zh),
   .font-cjk {
-    font-family: var(--font-noto-sc), var(--font-plex-sans), system-ui, sans-serif;
+    font-family: var(--font-noto-sc), var(--font-plus-jakarta), system-ui, sans-serif;
   }
 
   ::selection {

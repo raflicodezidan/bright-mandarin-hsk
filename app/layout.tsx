@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Noto_Sans_SC, Poppins } from "next/font/google";
+import {
+  JetBrains_Mono,
+  Noto_Sans_SC,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-poppins",
+  variable: "--font-plus-jakarta",
   display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-plex-mono",
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
@@ -39,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${poppins.variable} ${plexMono.variable} ${notoSansSc.variable}`}
+      className={`${plusJakarta.variable} ${jetbrainsMono.variable} ${notoSansSc.variable}`}
     >
       <body>{children}</body>
     </html>

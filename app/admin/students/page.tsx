@@ -81,7 +81,7 @@ export default async function StudentsPage({
       <div className="flex flex-col gap-4">
         <form
           method="get"
-          className="flex flex-col gap-3 sm:flex-row sm:items-center"
+          className="flex flex-col gap-3 border-b border-[#DCD9D0] pb-4 sm:flex-row sm:items-center"
         >
           <div className="w-full sm:max-w-xs">
             <label htmlFor="q" className="sr-only">
@@ -105,7 +105,7 @@ export default async function StudentsPage({
             </Select>
           </div>
           <div className="flex items-center gap-3">
-            <Button type="submit" variant="secondary">
+            <Button type="submit" variant="neutral">
               Terapkan
             </Button>
             {q || status !== "all" ? (
@@ -138,10 +138,10 @@ export default async function StudentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Dibuat</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Nama</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
                   <TableHead className="w-12">
                     <span className="sr-only">Aksi</span>
                   </TableHead>
@@ -151,7 +151,7 @@ export default async function StudentsPage({
                 {students.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs tabular">
                       {student.username}
                     </TableCell>
                     <TableCell>
@@ -161,7 +161,7 @@ export default async function StudentsPage({
                         <Badge tone="muted">Nonaktif</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-text-muted">
+                    <TableCell className="font-mono text-xs tabular text-text-muted">
                       {formatDate(student.created_at)}
                     </TableCell>
                     <TableCell className="text-right">

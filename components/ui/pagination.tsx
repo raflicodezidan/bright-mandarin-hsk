@@ -20,7 +20,7 @@ export function Pagination({
   const last = Math.min(page * pageSize, totalItems);
 
   const linkClass =
-    "inline-flex h-8 items-center rounded-sm border border-border-strong bg-surface px-3 text-xs font-medium text-text hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+    "inline-flex h-8 items-center rounded-[2px] border border-[#DCD9D0] bg-[#FAF9F6] px-3 text-xs font-medium text-[#18181B] hover:bg-[#ECEAE3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
   return (
     <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">

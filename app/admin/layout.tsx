@@ -9,11 +9,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdmin();
+  const profile = await requireAdmin();
 
   return (
     <ToastProvider>
       <AdminShell
+        userName={profile.full_name}
+        email={profile.username}
         logout={
           <form action={logoutAction}>
             <Button type="submit" variant="danger" size="sm">

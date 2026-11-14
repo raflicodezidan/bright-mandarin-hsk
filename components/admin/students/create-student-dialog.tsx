@@ -72,6 +72,7 @@ export function CreateStudentDialog() {
       <Dialog
         open={open}
         onClose={close}
+        presentation="drawer"
         title={created ? "Murid berhasil dibuat" : "Tambah murid"}
         description={
           created
@@ -110,7 +111,7 @@ export function CreateStudentDialog() {
                     {created.password}
                   </span>
                   <Button
-                    size="sm"
+        size="sm"
                     variant="secondary"
                     icon={
                       copied ? (

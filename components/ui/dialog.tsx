@@ -13,6 +13,7 @@ export type DialogProps = {
   children?: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "lg";
+  presentation?: "dialog" | "drawer";
 };
 
 const FOCUSABLE =
@@ -26,6 +27,7 @@ export function Dialog({
   children,
   footer,
   size = "sm",
+  presentation = "dialog",
 }: DialogProps) {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const onCloseRef = React.useRef(onClose);
@@ -77,10 +79,18 @@ export function Dialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[rgba(26,26,26,0.4)]"
+    <div
+        className={cn(
+          "fixed inset-0 z-50",
+          presentation === "drawer"
+            ? "flex justify-end"
+            : "flex items-center justify-center p-4",
+        )}
+      >
+      <button
+        type="button"
+        aria-label="Tutup dialog"
+        className="absolute inset-0 bg-black/20"
         onClick={onClose}
       />
       <div
@@ -91,9 +101,15 @@ export function Dialog({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative flex w-full flex-col rounded-md border border-border bg-surface shadow-[0_4px_16px_rgba(0,0,0,0.08)] outline-none",
+          presentation === "drawer"
+            ? "relative flex h-full w-full max-w-[420px] flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
+            : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none",
         )}
-        style={{ maxWidth: size === "sm" ? 480 : 640 }}
+        style={
+          presentation === "dialog"
+            ? { maxWidth: size === "sm" ? 480 : 640 }
+            : undefined
+        }
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
           <div className="flex flex-col gap-1">
@@ -110,12 +126,12 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="rounded-sm p-1 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded-[2px] p-1 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <X size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className={cn("px-6 py-5", presentation === "drawer" && "flex-1 overflow-y-auto")}>{children}</div>
         {footer ? (
           <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
             {footer}

@@ -149,7 +149,7 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
         {menuOpen ? (
           <div
             role="menu"
-            className="absolute right-0 top-full z-20 mt-1 flex w-44 flex-col rounded-sm border border-border bg-surface py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+            className="absolute right-0 top-full z-20 mt-1 flex w-44 flex-col rounded-[2px] border border-border bg-surface py-1"
           >
             <button
               type="button"
@@ -178,7 +178,7 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
             <button
               type="button"
               role="menuitem"
-              className="px-3 py-2 text-left text-sm text-accent hover:bg-accent-subtle focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+              className="px-3 py-2 text-left text-sm text-[#A62626] hover:bg-[#FDF2F2] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
               onClick={() => openDialog("delete")}
             >
               Hapus

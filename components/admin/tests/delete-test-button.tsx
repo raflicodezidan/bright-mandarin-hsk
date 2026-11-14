@@ -50,7 +50,7 @@ export function DeleteTestButton({
         }
         onClick={() => setOpen(true)}
         icon={<Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />}
-        className="text-accent hover:bg-accent-subtle"
+        className="text-[#A62626] hover:bg-[#FDF2F2]"
       >
         Hapus
       </Button>

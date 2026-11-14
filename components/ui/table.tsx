@@ -7,20 +7,18 @@ export type TableProps = React.TableHTMLAttributes<HTMLTableElement> & {
 
 export function Table({ className, caption, children, ...props }: TableProps) {
   return (
-    <div className="rounded-md border border-border bg-surface">
-      <div className="w-full overflow-x-auto">
-        <table
-          className={cn("w-full border-collapse text-left text-sm", className)}
-          {...props}
-        >
-          {caption ? (
-            <caption className="border-b border-border px-4 py-3 text-left text-xs text-text-muted">
-              {caption}
-            </caption>
-          ) : null}
-          {children}
-        </table>
-      </div>
+    <div className="w-full overflow-x-auto border-y border-border">
+      <table
+        className={cn("w-full border-collapse text-left text-sm", className)}
+        {...props}
+      >
+        {caption ? (
+          <caption className="border-b border-border px-4 py-3 text-left text-xs text-text-muted">
+            {caption}
+          </caption>
+        ) : null}
+        {children}
+      </table>
     </div>
   );
 }
@@ -31,7 +29,7 @@ export function TableHeader({
   ...props
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead className={cn("bg-surface-muted", className)} {...props}>
+    <thead className={cn("bg-surface", className)} {...props}>
       {children}
     </thead>
   );
@@ -56,7 +54,7 @@ export function TableRow({
 }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("h-12 transition-colors duration-150 hover:bg-surface-muted", className)}
+      className={cn("h-12 border-b border-border bg-paper transition-colors duration-150 hover:bg-[#F1EFE9]", className)}
       {...props}
     >
       {children}
@@ -74,7 +72,7 @@ export function TableHead({
     <th
       scope="col"
       className={cn(
-        "sticky top-0 h-10 px-4 py-3 text-xs font-semibold text-text-muted",
+        "sticky top-0 h-10 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]",
         numeric ? "text-right tabular" : "text-left",
         className,
       )}

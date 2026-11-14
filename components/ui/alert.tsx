@@ -36,7 +36,7 @@ export function Alert({ tone = "info", title, children, className }: AlertProps)
     <div
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex gap-3 rounded-sm border px-4 py-3 text-sm text-text",
+        "flex gap-3 rounded-[2px] border px-4 py-3 text-sm text-text",
         config.wrapper,
         className,
       )}
