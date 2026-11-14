@@ -36,26 +36,26 @@ Ganti nilai dengan palet brand klien saat tersedia, **nama token tetap**.
 
 | Token | Hex | Pemakaian |
 |---|---|---|
-| `bg` | `#F7F7F5` | Latar halaman |
+| `bg` | `#F6FAF6` | Latar halaman |
 | `surface` | `#FFFFFF` | Kartu, tabel, form, dialog |
-| `surface-muted` | `#F0F0EC` | Header tabel, area sekunder |
-| `border` | `#DDDDD6` | Border default |
-| `border-strong` | `#BDBDB3` | Border input, pemisah penting |
+| `surface-muted` | `#EEF5EE` | Header tabel, area sekunder |
+| `border` | `#DCE6DC` | Border default |
+| `border-strong` | `#BFCFC0` | Border input, pemisah penting |
 | `text` | `#1A1A1A` | Teks utama |
-| `text-muted` | `#5C5C55` | Teks sekunder, label |
-| `primary` | `#1B3A5C` | Tombol utama, link, item nav aktif, fokus |
-| `primary-hover` | `#142C47` | Hover tombol utama |
-| `primary-subtle` | `#E8EEF4` | Latar item nav aktif, soal terjawab |
+| `text-muted` | `#4F5F50` | Teks sekunder, label |
+| `primary` | `#2E7D32` | Tombol utama, link, item nav aktif, fokus |
+| `primary-hover` | `#1B5E20` | Hover tombol utama |
+| `primary-subtle` | `#E8F5E9` | Latar item nav aktif, soal terjawab |
 | `accent` | `#B3262B` | **Hemat.** Timer di bawah 5 menit, aksi destruktif, error |
 | `accent-subtle` | `#FBEAEA` | Latar alert error |
-| `success` / `success-subtle` | `#2F6B3F` / `#E6F2E8` | Status selesai, alert sukses |
+| `success` / `success-subtle` | `#2E7D32` / `#E8F5E9` | Status selesai, alert sukses |
 | `warning` / `warning-subtle` | `#8A5A00` / `#FFF4DC` | Status berlangsung, peringatan |
 
 Aturan: maksimal satu warna non-netral dominan per layar (`primary`). `accent` tidak dipakai untuk dekorasi. Status tidak boleh hanya berbeda warna; selalu ada teks.
 
 ### 3.2 Tipografi
 
-- Sans: **IBM Plex Sans** (Latin) dengan fallback **Noto Sans SC** untuk karakter Mandarin, lalu `system-ui`.
+- Sans: **Poppins** (Latin) dengan fallback **Noto Sans SC** untuk karakter Mandarin, lalu `system-ui`.
 - Mono: **IBM Plex Mono** untuk timer, skor, nomor soal. Selalu `font-variant-numeric: tabular-nums`.
 - Muat lewat `next/font/google`. Noto Sans SC: `preload: false`, bobot 400 dan 500.
 
@@ -111,27 +111,27 @@ Datar. Satu-satunya bayangan: dialog dan dropdown `0 4px 16px rgba(0,0,0,0.08)`.
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F7F7F5;
+  --color-bg: #F6FAF6;
   --color-surface: #FFFFFF;
-  --color-surface-muted: #F0F0EC;
-  --color-border: #DDDDD6;
-  --color-border-strong: #BDBDB3;
+  --color-surface-muted: #EEF5EE;
+  --color-border: #DCE6DC;
+  --color-border-strong: #BFCFC0;
   --color-text: #1A1A1A;
-  --color-text-muted: #5C5C55;
-  --color-primary: #1B3A5C;
-  --color-primary-hover: #142C47;
-  --color-primary-subtle: #E8EEF4;
+  --color-text-muted: #4F5F50;
+  --color-primary: #2E7D32;
+  --color-primary-hover: #1B5E20;
+  --color-primary-subtle: #E8F5E9;
   --color-accent: #B3262B;
   --color-accent-subtle: #FBEAEA;
-  --color-success: #2F6B3F;
-  --color-success-subtle: #E6F2E8;
+  --color-success: #2E7D32;
+  --color-success-subtle: #E8F5E9;
   --color-warning: #8A5A00;
   --color-warning-subtle: #FFF4DC;
 
   --radius-sm: 4px;
   --radius-md: 6px;
 
-  --font-sans: var(--font-plex-sans), var(--font-noto-sc), system-ui, sans-serif;
+  --font-sans: var(--font-poppins), var(--font-noto-sc), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 ```

@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f7f7f5;
+  --color-bg: #f6faf6;
   --color-surface: #ffffff;
-  --color-surface-muted: #f0f0ec;
-  --color-border: #ddddd6;
-  --color-border-strong: #bdbdb3;
+  --color-surface-muted: #eef5ee;
+  --color-border: #dce6dc;
+  --color-border-strong: #bfcfc0;
   --color-text: #1a1a1a;
-  --color-text-muted: #5c5c55;
-  --color-primary: #1b3a5c;
-  --color-primary-hover: #142c47;
-  --color-primary-subtle: #e8eef4;
+  --color-text-muted: #4f5f50;
+  --color-primary: #2e7d32;
+  --color-primary-hover: #1b5e20;
+  --color-primary-subtle: #e8f5e9;
   --color-accent: #b3262b;
   --color-accent-subtle: #fbeaea;
-  --color-success: #2f6b3f;
-  --color-success-subtle: #e6f2e8;
+  --color-success: #2e7d32;
+  --color-success-subtle: #e8f5e9;
   --color-warning: #8a5a00;
   --color-warning-subtle: #fff4dc;
 
   --radius-sm: 4px;
   --radius-md: 6px;
 
-  --font-sans: var(--font-plex-sans), var(--font-noto-sc), system-ui, sans-serif;
+  --font-sans: var(--font-poppins), var(--font-noto-sc), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
   --text-xs: 13px;

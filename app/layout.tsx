@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Noto_Sans_SC } from "next/font/google";
+import { IBM_Plex_Mono, Noto_Sans_SC, Poppins } from "next/font/google";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
+const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-plex-sans",
+  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${plexSans.variable} ${plexMono.variable} ${notoSansSc.variable}`}
+      className={`${poppins.variable} ${plexMono.variable} ${notoSansSc.variable}`}
     >
       <body>{children}</body>
     </html>
