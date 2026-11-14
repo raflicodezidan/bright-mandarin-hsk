@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DeleteTestButton } from "@/components/admin/tests/delete-test-button";
 import { DuplicateTestButton } from "@/components/admin/tests/duplicate-test-button";
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/format";
@@ -113,6 +114,11 @@ export default async function AdminTestsPage() {
                     >
                       Kelola
                     </LinkButton>
+                    <DeleteTestButton
+                      testId={test.id}
+                      title={test.title}
+                      hasAttempts={(attemptCounts.get(test.id) ?? 0) > 0}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

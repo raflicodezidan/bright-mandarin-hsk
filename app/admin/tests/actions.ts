@@ -300,6 +300,59 @@ export async function deleteQuestionAction(
   return { ok: true, data: undefined };
 }
 
+export async function deleteTestAction(
+  testId: string,
+): Promise<TestActionResult> {
+  const denied = await guardAdmin();
+  if (denied) return denied;
+
+  if (!/^[0-9a-f-]{36}$/.test(testId)) {
+    return { ok: false, error: "Tes tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const { data: test } = await supabase
+    .from("tests")
+    .select("id, title")
+    .eq("id", testId)
+    .maybeSingle();
+
+  if (!test) return { ok: false, error: "Tes tidak ditemukan." };
+
+  const { count: attemptCount } = await supabase
+    .from("attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("test_id", testId);
+
+  if ((attemptCount ?? 0) > 0) {
+    return {
+      ok: false,
+      error: "Tes tidak dapat dihapus karena sudah ada pengerjaan.",
+    };
+  }
+
+  const { data: questions } = await supabase
+    .from("questions")
+    .select("image_path, audio_path")
+    .eq("test_id", testId);
+
+  const mediaPaths = (questions ?? [])
+    .flatMap((question) => [question.image_path, question.audio_path])
+    .filter((path): path is string => Boolean(path));
+
+  const { error } = await supabase.from("tests").delete().eq("id", testId);
+
+  if (error) {
+    return { ok: false, error: errorMessage(error, "Gagal menghapus tes.") };
+  }
+
+  await removeMedia(mediaPaths);
+
+  revalidatePath("/admin/tests");
+  revalidatePath("/admin");
+  return { ok: true, data: undefined };
+}
+
 export async function duplicateTestAction(
   testId: string,
 ): Promise<TestActionResult<{ id: string }>> {
