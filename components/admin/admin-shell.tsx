@@ -88,6 +88,7 @@ export function AdminShell({ children, logout }: AdminShellProps) {
   const brand = (
     <div className="flex flex-col">
       <span className="text-sm font-semibold text-text">Bright Mandarin</span>
+      <span className="text-xs text-text-muted">Admin</span>
     </div>
   );
 
@@ -106,6 +107,7 @@ export function AdminShell({ children, logout }: AdminShellProps) {
           </button>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-text">Bright Mandarin</span>
+            <span className="text-xs text-text-muted">Admin</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -139,11 +141,6 @@ export function AdminShell({ children, logout }: AdminShellProps) {
             </div>
             <div className="flex-1 px-3 py-3">
               <NavList pathname={pathname} onNavigate={closeDrawer} />
-            </div>
-            <div className="border-t border-border px-4 py-3">
-              <p className="text-xs text-text-muted">
-                Bright Mandarin · Admin
-              </p>
             </div>
           </div>
         </div>
