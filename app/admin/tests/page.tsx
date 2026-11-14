@@ -64,13 +64,21 @@ export default async function AdminTestsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Judul</TableHead>
-              <TableHead numeric>Level</TableHead>
-              <TableHead numeric>Durasi</TableHead>
-              <TableHead numeric>Soal</TableHead>
-              <TableHead numeric>Pengerjaan</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-56">
+              <TableHead className="min-w-[220px]">Judul</TableHead>
+              <TableHead numeric className="w-20">
+                Level
+              </TableHead>
+              <TableHead numeric className="w-24">
+                Durasi
+              </TableHead>
+              <TableHead numeric className="w-16">
+                Soal
+              </TableHead>
+              <TableHead numeric className="w-28">
+                Pengerjaan
+              </TableHead>
+              <TableHead className="w-28">Status</TableHead>
+              <TableHead className="w-44 text-right">
                 <span className="sr-only">Aksi</span>
               </TableHead>
             </TableRow>

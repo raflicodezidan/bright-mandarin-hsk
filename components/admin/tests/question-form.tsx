@@ -6,10 +6,11 @@ import { Plus, Trash2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { saveQuestionAction } from "@/app/admin/tests/actions";
+import { deleteQuestionAction, saveQuestionAction } from "@/app/admin/tests/actions";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type Section = Tables<"questions">["section"];
@@ -74,6 +75,7 @@ export function QuestionForm({
   const [audioFile, setAudioFile] = React.useState<File | null>(null);
   const [removeImage, setRemoveImage] = React.useState(false);
   const [removeAudio, setRemoveAudio] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const hasAudio = Boolean(audioFile) || (Boolean(existingAudio) && !removeAudio);
 
@@ -152,6 +154,22 @@ export function QuestionForm({
         return;
       }
       toast(questionId === "new" ? "Soal ditambahkan." : "Soal disimpan.");
+      router.push(`/admin/tests/${testId}`);
+      router.refresh();
+    });
+  }
+
+  function removeQuestion() {
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteQuestionAction(questionId);
+      if (!result.ok) {
+        setError(result.error);
+        setConfirmDelete(false);
+        return;
+      }
+      toast("Soal dihapus.");
+      setConfirmDelete(false);
       router.push(`/admin/tests/${testId}`);
       router.refresh();
     });
@@ -324,14 +342,16 @@ export function QuestionForm({
                 Audio akan dihapus saat disimpan.
               </p>
             ) : null}
-            <input
-              id="question-audio"
-              type="file"
-              accept="audio/mpeg,.mp3"
-              onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)}
-              disabled={pending}
-              className="text-sm"
-            />
+            <div className="rounded-sm border border-border-strong bg-surface px-3 py-2">
+              <input
+                id="question-audio"
+                type="file"
+                accept="audio/mpeg,.mp3"
+                onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)}
+                disabled={pending}
+                className="block w-full text-sm text-text file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-primary-hover disabled:file:opacity-60"
+              />
+            </div>
           </div>
         </Field>
 
@@ -371,14 +391,16 @@ export function QuestionForm({
                 Gambar akan dihapus saat disimpan.
               </p>
             ) : null}
-            <input
-              id="question-image"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-              disabled={pending}
-              className="text-sm"
-            />
+            <div className="rounded-sm border border-border-strong bg-surface px-3 py-2">
+              <input
+                id="question-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                disabled={pending}
+                className="block w-full text-sm text-text file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-primary-hover disabled:file:opacity-60"
+              />
+            </div>
           </div>
         </Field>
 
@@ -393,8 +415,42 @@ export function QuestionForm({
           >
             Batal
           </Button>
+          {questionId !== "new" && !locked ? (
+            <Button
+              variant="danger"
+              onClick={() => setConfirmDelete(true)}
+              disabled={pending}
+            >
+              Hapus soal
+            </Button>
+          ) : null}
         </div>
       </form>
+
+      <Dialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Hapus soal?"
+        description="Soal beserta opsi, kunci, dan medianya akan dihapus permanen."
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDelete(false)}
+              disabled={pending}
+            >
+              Batal
+            </Button>
+            <Button variant="danger" onClick={removeQuestion} loading={pending}>
+              Hapus
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-text-muted">
+          Nomor soal setelahnya akan dirapikan otomatis.
+        </p>
+      </Dialog>
     </Card>
   );
 }
