@@ -36,20 +36,20 @@ Ganti nilai dengan palet brand klien saat tersedia, **nama token tetap**.
 
 | Token | Hex | Pemakaian |
 |---|---|---|
-| `bg` | `#F6FAF6` | Latar halaman |
+| `bg` | `#F5F5F5` | Latar halaman |
 | `surface` | `#FFFFFF` | Kartu, tabel, form, dialog |
-| `surface-muted` | `#EEF5EE` | Header tabel, area sekunder |
-| `border` | `#DCE6DC` | Border default |
-| `border-strong` | `#BFCFC0` | Border input, pemisah penting |
+| `surface-muted` | `#E8E8E8` | Header tabel, area sekunder, sidebar |
+| `border` | `#D4D4D4` | Border default |
+| `border-strong` | `#B3B3B3` | Border input, pemisah penting |
 | `text` | `#1A1A1A` | Teks utama |
-| `text-muted` | `#4F5F50` | Teks sekunder, label |
+| `text-muted` | `#595959` | Teks sekunder, label |
 | `primary` | `#2E7D32` | Tombol utama, link, item nav aktif, fokus |
 | `primary-hover` | `#1B5E20` | Hover tombol utama |
-| `primary-subtle` | `#E8F5E9` | Latar item nav aktif, soal terjawab |
-| `accent` | `#B3262B` | **Hemat.** Timer di bawah 5 menit, aksi destruktif, error |
-| `accent-subtle` | `#FBEAEA` | Latar alert error |
-| `success` / `success-subtle` | `#2E7D32` / `#E8F5E9` | Status selesai, alert sukses |
-| `warning` / `warning-subtle` | `#8A5A00` / `#FFF4DC` | Status berlangsung, peringatan |
+| `primary-subtle` | `#D9EDDA` | Latar item nav aktif, soal terjawab |
+| `accent` | `#C0392B` | **Hemat.** Timer di bawah 5 menit, aksi destruktif, error |
+| `accent-subtle` | `#F5D4D1` | Latar alert error |
+| `success` / `success-subtle` | `#27AE60` / `#D9EDDA` | Status selesai, alert sukses |
+| `warning` / `warning-subtle` | `#D68910` / `#FDECC8` | Status berlangsung, peringatan |
 
 Aturan: maksimal satu warna non-netral dominan per layar (`primary`). `accent` tidak dipakai untuk dekorasi. Status tidak boleh hanya berbeda warna; selalu ada teks.
 
@@ -111,22 +111,22 @@ Datar. Satu-satunya bayangan: dialog dan dropdown `0 4px 16px rgba(0,0,0,0.08)`.
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F6FAF6;
+  --color-bg: #F5F5F5;
   --color-surface: #FFFFFF;
-  --color-surface-muted: #EEF5EE;
-  --color-border: #DCE6DC;
-  --color-border-strong: #BFCFC0;
+  --color-surface-muted: #E8E8E8;
+  --color-border: #D4D4D4;
+  --color-border-strong: #B3B3B3;
   --color-text: #1A1A1A;
-  --color-text-muted: #4F5F50;
+  --color-text-muted: #595959;
   --color-primary: #2E7D32;
   --color-primary-hover: #1B5E20;
-  --color-primary-subtle: #E8F5E9;
-  --color-accent: #B3262B;
-  --color-accent-subtle: #FBEAEA;
-  --color-success: #2E7D32;
-  --color-success-subtle: #E8F5E9;
-  --color-warning: #8A5A00;
-  --color-warning-subtle: #FFF4DC;
+  --color-primary-subtle: #D9EDDA;
+  --color-accent: #C0392B;
+  --color-accent-subtle: #F5D4D1;
+  --color-success: #27AE60;
+  --color-success-subtle: #D9EDDA;
+  --color-warning: #D68910;
+  --color-warning-subtle: #FDECC8;
 
   --radius-sm: 4px;
   --radius-md: 6px;
