@@ -129,13 +129,18 @@ export function QuestionList({
               </Link>
               <button
                 type="button"
+                title={
+                  locked
+                    ? "Soal terkunci karena sudah ada pengerjaan"
+                    : "Hapus soal"
+                }
                 aria-label={`Hapus soal ${item.number}`}
                 disabled={pending || locked}
                 onClick={() => {
                   setError(null);
                   setDeleting(item);
                 }}
-                className="rounded-sm p-2 text-text-muted hover:bg-accent-subtle hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
+                className="rounded-sm p-2 text-accent hover:bg-accent-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
               >
                 <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
