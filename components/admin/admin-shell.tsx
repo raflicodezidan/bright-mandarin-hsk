@@ -52,8 +52,8 @@ function NavList({
             className={cn(
               "flex h-10 items-center gap-3 rounded-sm px-3 text-sm transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               active
-                ? "bg-primary-subtle font-medium text-primary"
-                : "text-text hover:bg-surface-muted",
+                ? "bg-primary-hover font-medium text-white"
+                : "text-white/90 hover:bg-primary-hover/80 hover:text-white",
             )}
           >
             <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -69,83 +69,97 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
+  const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
+  const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
+
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeDrawer();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen, closeDrawer]);
+
   const brand = (
     <div className="flex flex-col">
-      <span className="text-sm font-semibold text-text">Bright Mandarin</span>
-      <span className="text-xs text-text-muted">Admin</span>
+      <span className="text-sm font-semibold text-white">Bright Mandarin</span>
+      <span className="text-xs text-white/80">Admin</span>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-bg">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border bg-surface lg:flex">
-        <div className="px-6 py-5">{brand}</div>
-        <div className="flex-1 px-3 py-2">
-          <NavList pathname={pathname} />
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface px-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={openDrawer}
+            aria-label="Buka menu"
+            aria-expanded={drawerOpen}
+            className="rounded-sm p-2 text-text hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Menu size={20} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-text">Bright Mandarin</span>
+            <span className="text-xs text-text-muted">Admin</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-4">
-          <span className="truncate text-sm text-text">{userName ?? "Admin"}</span>
+        <div className="flex items-center gap-3">
+          <span className="hidden max-w-40 truncate text-sm text-text sm:inline">
+            {userName ?? "Admin"}
+          </span>
           {logout}
         </div>
-      </aside>
-
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface px-4 lg:hidden">
-        {brand}
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Buka menu"
-          aria-expanded={drawerOpen}
-          className="rounded-sm p-2 text-text hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <Menu size={20} strokeWidth={1.5} aria-hidden="true" />
-        </button>
       </header>
 
       {drawerOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40">
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-[rgba(26,26,26,0.4)]"
-            onClick={() => setDrawerOpen(false)}
+            onClick={closeDrawer}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Menu admin"
-            className="relative flex h-full w-64 flex-col border-r border-border bg-surface shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+            className="relative flex h-full w-72 max-w-[85vw] flex-col bg-primary shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
           >
-            <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center justify-between border-b border-primary-hover px-4 py-4">
               {brand}
               <button
                 type="button"
-                onClick={() => setDrawerOpen(false)}
+                onClick={closeDrawer}
                 aria-label="Tutup menu"
-                className="rounded-sm p-2 text-text-muted hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="rounded-sm p-2 text-white/80 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <X size={18} strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
-            <div className="flex-1 px-3 py-2">
-              <NavList
-                pathname={pathname}
-                onNavigate={() => setDrawerOpen(false)}
-              />
+            <div className="flex-1 px-3 py-3">
+              <NavList pathname={pathname} onNavigate={closeDrawer} />
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-4">
-              <span className="truncate text-sm text-text">
+            <div className="flex items-center justify-between gap-3 border-t border-primary-hover px-4 py-4">
+              <span className="truncate text-sm text-white">
                 {userName ?? "Admin"}
               </span>
-              {logout}
+              <div className="[&_button]:text-white [&_button]:hover:bg-primary-hover">
+                {logout}
+              </div>
             </div>
           </div>
         </div>
       ) : null}
 
-      <main className="lg:pl-60">
-        <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {children}
-        </div>
+      <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {children}
       </main>
     </div>
   );
