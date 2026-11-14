@@ -22,7 +22,6 @@ const NAV_ITEMS = [
 
 export type AdminShellProps = {
   children: React.ReactNode;
-  userName?: string;
   logout?: React.ReactNode;
 };
 
@@ -65,7 +64,7 @@ function NavList({
   );
 }
 
-export function AdminShell({ children, userName, logout }: AdminShellProps) {
+export function AdminShell({ children, logout }: AdminShellProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
@@ -89,7 +88,6 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
   const brand = (
     <div className="flex flex-col">
       <span className="text-sm font-semibold text-text">Bright Mandarin</span>
-      <span className="text-xs text-text-muted">Admin</span>
     </div>
   );
 
@@ -108,13 +106,9 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
           </button>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-text">Bright Mandarin</span>
-            <span className="text-xs text-text-muted">Admin</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden max-w-40 truncate text-sm text-text sm:inline">
-            {userName ?? "Admin"}
-          </span>
           {logout}
         </div>
       </header>
@@ -146,11 +140,10 @@ export function AdminShell({ children, userName, logout }: AdminShellProps) {
             <div className="flex-1 px-3 py-3">
               <NavList pathname={pathname} onNavigate={closeDrawer} />
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-4">
-              <span className="truncate text-sm text-text">
-                {userName ?? "Admin"}
-              </span>
-              <div>{logout}</div>
+            <div className="border-t border-border px-4 py-3">
+              <p className="text-xs text-text-muted">
+                Bright Mandarin · Admin
+              </p>
             </div>
           </div>
         </div>

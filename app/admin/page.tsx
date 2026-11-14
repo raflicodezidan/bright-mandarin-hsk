@@ -61,9 +61,9 @@ export default async function AdminDashboardPage() {
     <>
       <PageHeader title="Dashboard" description="Ringkasan kegiatan tes." />
 
-      <div className="flex flex-col gap-8">
-        <div className="rounded-md border border-border bg-surface-muted p-4 sm:p-6">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8">
+        <div className="w-full rounded-md border border-border bg-surface-muted p-4 sm:p-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 justify-items-center">
             <StatCard
               label="Murid aktif"
               value={students.count ?? 0}
@@ -87,8 +87,8 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
+        <section className="flex w-full flex-col items-center gap-4">
+          <div className="flex items-center justify-center gap-3">
             <h2 className="text-lg font-semibold text-text">Hasil terbaru</h2>
             <Link
               href="/admin/results"
@@ -99,10 +99,13 @@ export default async function AdminDashboardPage() {
           </div>
 
           {rows.length === 0 ? (
-            <EmptyState
-              title="Belum ada pengerjaan"
-              description="Hasil akan muncul setelah murid mengerjakan tes."
-            />
+            <div className="flex w-full justify-center">
+              <EmptyState
+                className="w-full max-w-xl text-center"
+                title="Belum ada pengerjaan"
+                description="Hasil akan muncul setelah murid mengerjakan tes."
+              />
+            </div>
           ) : (
             <Table>
               <TableHeader>
