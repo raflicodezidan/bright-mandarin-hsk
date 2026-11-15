@@ -14,6 +14,7 @@ export type DialogProps = {
   footer?: React.ReactNode;
   size?: "sm" | "lg";
   presentation?: "dialog" | "drawer";
+  drawerWidth?: number;
 };
 
 const FOCUSABLE =
@@ -28,6 +29,7 @@ export function Dialog({
   footer,
   size = "sm",
   presentation = "dialog",
+  drawerWidth = 420,
 }: DialogProps) {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const onCloseRef = React.useRef(onClose);
@@ -102,13 +104,13 @@ export function Dialog({
         tabIndex={-1}
         className={cn(
           presentation === "drawer"
-            ? "relative flex h-full w-full max-w-[420px] flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
+            ? "relative flex h-full w-full flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
             : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none",
         )}
         style={
           presentation === "dialog"
             ? { maxWidth: size === "sm" ? 480 : 640 }
-            : undefined
+            : { maxWidth: drawerWidth }
         }
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">

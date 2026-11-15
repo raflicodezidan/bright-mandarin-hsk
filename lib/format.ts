@@ -21,6 +21,16 @@ export function formatDateTime(value: string | Date): string {
   }).format(new Date(value))} WIB`;
 }
 
+export function formatTime(value: string | Date): string {
+  return `${new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: WIB,
+  }).format(new Date(value))} WIB`;
+}
+
 export function formatDuration(minutes: number): string {
   return `${minutes} menit`;
 }

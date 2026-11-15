@@ -63,7 +63,7 @@ export function Button({
       {loading ? (
         <span
           aria-hidden="true"
-          className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="size-4 animate-spin rounded-[1px] border-2 border-current border-t-transparent"
         />
       ) : (
         icon

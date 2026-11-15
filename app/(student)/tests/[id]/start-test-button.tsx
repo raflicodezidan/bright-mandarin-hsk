@@ -32,7 +32,7 @@ export function StartTestButton({ testId }: { testId: string }) {
     <div className="flex flex-col gap-3">
       {error ? <Alert tone="error">{error}</Alert> : null}
       <Button size="lg" onClick={start} loading={pending}>
-        Mulai tes
+        Mulai Tes
       </Button>
       <p className="text-xs text-text-muted">
         Waktu mulai berjalan segera setelah tombol ditekan.

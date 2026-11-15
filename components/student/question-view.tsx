@@ -29,7 +29,7 @@ export function QuestionView({
   const sectionLabel = question.section === "listening" ? "Listening" : "Reading";
 
   return (
-    <article className="flex flex-col gap-6 rounded-md border border-border bg-surface p-4 sm:p-6">
+    <article className="flex flex-col gap-6 rounded-[3px] border border-border bg-surface p-4 sm:p-6">
       <header className="flex flex-col gap-1">
         <p className="font-mono text-xs text-text-muted tabular">
           Soal {question.number}
@@ -59,7 +59,7 @@ export function QuestionView({
         <img
           src={question.imageUrl}
           alt={`Gambar soal ${question.number}`}
-          className="max-h-80 w-auto max-w-full rounded-sm border border-border object-contain"
+          className="max-h-80 w-auto max-w-full rounded-[2px] border border-border object-contain"
         />
       ) : null}
 
@@ -74,7 +74,7 @@ export function QuestionView({
               disabled={disabled || !onSelect}
               aria-pressed={selected}
               className={cn(
-                "flex min-h-14 w-full items-center gap-3 rounded-sm border px-3 py-2 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:min-h-12",
+                "flex min-h-14 w-full items-center gap-3 rounded-[2px] border px-3 py-2 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:min-h-12",
                 selected
                   ? "border-2 border-primary bg-primary-subtle"
                   : "border-border-strong bg-surface hover:bg-surface-muted",
@@ -84,7 +84,7 @@ export function QuestionView({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-sm border border-border-strong font-mono text-sm",
+                  "flex size-8 shrink-0 items-center justify-center rounded-[2px] border border-border-strong font-mono text-sm",
                   selected ? "border-primary text-primary" : "text-text-muted",
                 )}
               >

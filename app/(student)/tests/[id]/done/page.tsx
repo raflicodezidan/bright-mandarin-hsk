@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { LinkButton } from "@/components/ui/link-button";
 import { createClient } from "@/lib/supabase/server";
 import { requireStudent } from "@/lib/auth";
 
@@ -27,21 +27,29 @@ export default async function DonePage({
   }
 
   return (
-    <div className="flex flex-col gap-4 py-8">
-      <h1 className="text-xl font-semibold text-text">Terima kasih</h1>
-      <p className="text-base text-text">
-        Jawaban Anda telah tersimpan. Terima kasih.
-      </p>
-      <p className="text-sm text-text-muted">
-        Nilai akan diperiksa oleh pengajar. Anda dapat menutup halaman ini.
-      </p>
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+          Tes selesai
+        </p>
+        <h1 className="text-[24px] font-bold leading-8 tracking-[-0.02em] text-[#18181B]">
+          Terima kasih
+        </h1>
+      </header>
+
+      <div className="flex flex-col gap-2 border-y border-[#DCD9D0] py-6">
+        <p className="text-[14px] font-medium text-[#18181B]">
+          Jawaban Anda telah tersimpan.
+        </p>
+        <p className="text-[13px] leading-6 text-[#52525B]">
+          Nilai akan diperiksa oleh pengajar. Anda dapat menutup halaman ini.
+        </p>
+      </div>
+
       <div>
-        <Link
-          href="/tests"
-          className="text-sm text-primary underline underline-offset-2"
-        >
+        <LinkButton href="/tests" variant="secondary">
           Kembali ke daftar tes
-        </Link>
+        </LinkButton>
       </div>
     </div>
   );
