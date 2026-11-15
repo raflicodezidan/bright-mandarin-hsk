@@ -1,4 +1,7 @@
+export const MAX_RESULT_QUERY_LENGTH = 80;
+
 export type ResultFilters = {
+  q: string | null;
   studentId: string | null;
   testId: string | null;
   level: number | null;
@@ -10,6 +13,21 @@ export type ResultFilters = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Karakter `,` `(` `)` dan `\` merusak sintaks filter PostgREST, jadi dibuang.
+ * `%` dan `_` dibiarkan agar murid dapat dicari memakai wildcard.
+ */
+function parseQuery(raw: string | null): string | null {
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/[,()\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_RESULT_QUERY_LENGTH)
+    .trim();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 export function parseResultFilters(params: URLSearchParams): ResultFilters {
   const studentId = params.get("student");
   const testId = params.get("test");
@@ -20,6 +38,7 @@ export function parseResultFilters(params: URLSearchParams): ResultFilters {
   const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
 
   return {
+    q: parseQuery(params.get("q")),
     studentId: studentId && UUID.test(studentId) ? studentId : null,
     testId: testId && UUID.test(testId) ? testId : null,
     level: levelRaw >= 1 && levelRaw <= 6 ? levelRaw : null,
@@ -37,6 +56,7 @@ export function parseResultFilters(params: URLSearchParams): ResultFilters {
 
 export function resultFilterQuery(filters: ResultFilters): URLSearchParams {
   const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
   if (filters.studentId) params.set("student", filters.studentId);
   if (filters.testId) params.set("test", filters.testId);
   if (filters.level) params.set("level", String(filters.level));
@@ -48,7 +68,8 @@ export function resultFilterQuery(filters: ResultFilters): URLSearchParams {
 
 export function hasActiveFilters(filters: ResultFilters): boolean {
   return Boolean(
-    filters.studentId ||
+    filters.q ||
+      filters.studentId ||
       filters.testId ||
       filters.level ||
       filters.from ||

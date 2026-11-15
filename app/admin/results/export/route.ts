@@ -8,6 +8,7 @@ import {
   percentage,
 } from "@/lib/attempts";
 import { parseResultFilters } from "@/lib/results-filter";
+import { searchStudentIds } from "@/lib/results-search";
 import { wibDayEnd, wibDayStart } from "@/lib/date";
 
 function csvCell(value: string | number | null): string {
@@ -44,6 +45,19 @@ export async function GET(request: NextRequest) {
 
   if (filters.studentId) query = query.eq("student_id", filters.studentId);
   if (filters.testId) query = query.eq("test_id", filters.testId);
+  if (filters.q) {
+    const studentSearch = await searchStudentIds(supabase, filters.q);
+    if (studentSearch.failed) {
+      return NextResponse.json(
+        { error: "Gagal membuat CSV." },
+        { status: 500 },
+      );
+    }
+    if (studentSearch.ids.length === 0) {
+      return csvResponse([], filters);
+    }
+    query = query.in("student_id", studentSearch.ids);
+  }
   if (filters.level) {
     const ids = tests
       .filter((test) => test.level === filters.level)

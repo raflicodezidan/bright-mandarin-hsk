@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { LinkButton } from "@/components/ui/link-button";
 import { Alert } from "@/components/ui/alert";
@@ -25,14 +26,17 @@ import {
 } from "@/lib/attempts";
 import {
   hasActiveFilters,
+  MAX_RESULT_QUERY_LENGTH,
   parseResultFilters,
   resultFilterQuery,
 } from "@/lib/results-filter";
+import { searchStudentIds } from "@/lib/results-search";
 import { wibDayEnd, wibDayStart } from "@/lib/date";
 
 export const metadata = { title: "Hasil" };
 
 const PAGE_SIZE = 25;
+const NO_MATCH_ID = "00000000-0000-0000-0000-000000000000";
 
 export default async function ResultsPage({
   searchParams,
@@ -65,6 +69,10 @@ export default async function ResultsPage({
   const testIdsForLevel = filters.level
     ? tests.filter((test) => test.level === filters.level).map((test) => test.id)
     : null;
+  const studentSearch = filters.q
+    ? await searchStudentIds(supabase, filters.q)
+    : null;
+  const searchFailed = studentSearch?.failed ?? false;
 
   const from = (filters.page - 1) * PAGE_SIZE;
 
@@ -77,9 +85,15 @@ export default async function ResultsPage({
 
   if (filters.studentId) query = query.eq("student_id", filters.studentId);
   if (filters.testId) query = query.eq("test_id", filters.testId);
+  if (studentSearch) {
+    query =
+      studentSearch.ids.length === 0
+        ? query.eq("student_id", NO_MATCH_ID)
+        : query.in("student_id", studentSearch.ids);
+  }
   if (testIdsForLevel) {
     if (testIdsForLevel.length === 0) {
-      query = query.eq("test_id", "00000000-0000-0000-0000-000000000000");
+      query = query.eq("test_id", NO_MATCH_ID);
     } else {
       query = query.in("test_id", testIdsForLevel);
     }
@@ -106,6 +120,12 @@ export default async function ResultsPage({
 
   const exportQuery = resultFilterQuery(filters);
 
+  const emptyDescription = filters.q
+    ? `Tidak ada pengerjaan yang cocok dengan "${filters.q}".`
+    : hasActiveFilters(filters)
+      ? "Ubah filter untuk melihat hasil lain."
+      : "Hasil akan muncul setelah murid mengerjakan tes.";
+
   return (
     <>
       <PageHeader
@@ -124,75 +144,102 @@ export default async function ResultsPage({
       <div className="flex flex-col gap-4">
         <form
           method="get"
-          className="grid grid-cols-1 gap-3 border-b border-[#DCD9D0] pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+          className="flex flex-col gap-3 border-b border-[#DCD9D0] pb-4"
         >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="student" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Murid
-            </label>
-            <Select id="student" name="student" defaultValue={filters.studentId ?? ""}>
-              <option value="">Semua murid</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.full_name}
-                </option>
-              ))}
-            </Select>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3 xl:col-span-2">
+              <label htmlFor="q" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Cari murid
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="q"
+                  name="q"
+                  type="search"
+                  defaultValue={filters.q ?? ""}
+                  placeholder="Nama atau username"
+                  maxLength={MAX_RESULT_QUERY_LENGTH}
+                  autoComplete="off"
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="submit"
+                  variant="neutral"
+                  icon={<Search size={15} strokeWidth={1.5} aria-hidden="true" />}
+                >
+                  Cari
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="student" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Murid
+              </label>
+              <Select id="student" name="student" defaultValue={filters.studentId ?? ""}>
+                <option value="">Semua murid</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.full_name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="test" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Tes
+              </label>
+              <Select id="test" name="test" defaultValue={filters.testId ?? ""}>
+                <option value="">Semua tes</option>
+                {tests.map((test) => (
+                  <option key={test.id} value={test.id}>
+                    HSK {test.level} · {test.title}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="level" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Level
+              </label>
+              <Select
+                id="level"
+                name="level"
+                defaultValue={filters.level ? String(filters.level) : ""}
+              >
+                <option value="">Semua</option>
+                {[1, 2, 3, 4, 5, 6].map((level) => (
+                  <option key={level} value={level}>
+                    HSK {level}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="from" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Dari tanggal
+              </label>
+              <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="to" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Sampai tanggal
+              </label>
+              <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="status" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
+                Status
+              </label>
+              <Select id="status" name="status" defaultValue={filters.status ?? ""}>
+                <option value="">Semua status</option>
+                <option value="in_progress">Sedang berlangsung</option>
+                <option value="submitted">Selesai</option>
+                <option value="expired">Waktu habis</option>
+              </Select>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="test" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Tes
-            </label>
-            <Select id="test" name="test" defaultValue={filters.testId ?? ""}>
-              <option value="">Semua tes</option>
-              {tests.map((test) => (
-                <option key={test.id} value={test.id}>
-                  HSK {test.level} · {test.title}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="level" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Level
-            </label>
-            <Select
-              id="level"
-              name="level"
-              defaultValue={filters.level ? String(filters.level) : ""}
-            >
-              <option value="">Semua</option>
-              {[1, 2, 3, 4, 5, 6].map((level) => (
-                <option key={level} value={level}>
-                  HSK {level}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="from" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Dari tanggal
-            </label>
-            <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="to" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Sampai tanggal
-            </label>
-            <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="status" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
-              Status
-            </label>
-            <Select id="status" name="status" defaultValue={filters.status ?? ""}>
-              <option value="">Semua status</option>
-              <option value="in_progress">Sedang berlangsung</option>
-              <option value="submitted">Selesai</option>
-              <option value="expired">Waktu habis</option>
-            </Select>
-          </div>
-          <div className="col-span-full flex items-center gap-3">
+
+          <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" variant="neutral">
               Terapkan
             </Button>
@@ -207,16 +254,12 @@ export default async function ResultsPage({
           </div>
         </form>
 
-        {error ? (
+        {error || searchFailed ? (
           <Alert tone="error">Gagal memuat hasil. Muat ulang halaman.</Alert>
         ) : attempts.length === 0 ? (
           <EmptyState
             title="Tidak ada pengerjaan"
-            description={
-              hasActiveFilters(filters)
-                ? "Ubah filter untuk melihat hasil lain."
-                : "Hasil akan muncul setelah murid mengerjakan tes."
-            }
+            description={emptyDescription}
           />
         ) : (
           <>
