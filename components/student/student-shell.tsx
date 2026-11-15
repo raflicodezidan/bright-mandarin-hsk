@@ -10,7 +10,7 @@ export function StudentShell({ children, userName, logout }: StudentShellProps) 
   return (
     <div className="min-h-screen bg-[#F4F3EF] text-[#18181B]">
       <header className="sticky top-0 z-30 h-14 border-b border-[#DCD9D0] bg-[#F8F7F3]">
-        <div className="mx-auto flex h-full w-full max-w-4xl items-center justify-between gap-4 px-6">
+        <div className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <span
               lang="zh-Hans"
@@ -40,7 +40,7 @@ export function StudentShell({ children, userName, logout }: StudentShellProps) 
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-4xl px-6 py-10">{children}</main>
+      <main className="w-full px-4 py-10 sm:px-6 lg:px-8">{children}</main>
     </div>
   );
 }
