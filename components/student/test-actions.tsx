@@ -48,7 +48,7 @@ export function TestActions({
 
   if (mode === "done") {
     return (
-      <Button variant="secondary" size="sm" disabled>
+      <Button variant="secondary" size="sm" className="w-full sm:w-auto" disabled>
         Selesai
       </Button>
     );
@@ -83,6 +83,7 @@ export function TestActions({
       <Button
         variant={mode === "resume" ? "neutral" : "primary"}
         size="sm"
+        className="w-full sm:w-auto"
         onClick={() => setOpen(true)}
       >
         {mode === "resume" ? "Lanjutkan" : "Mulai Tes"}
@@ -101,6 +102,7 @@ export function TestActions({
           <>
             <Button
               variant="secondary"
+              className="w-full sm:w-auto"
               onClick={() => setOpen(false)}
               disabled={pending}
             >
@@ -108,6 +110,7 @@ export function TestActions({
             </Button>
             <Button
               variant={mode === "resume" ? "neutral" : "primary"}
+              className="w-full sm:w-auto"
               onClick={confirm}
               loading={pending}
             >

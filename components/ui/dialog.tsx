@@ -135,7 +135,7 @@ export function Dialog({
         </div>
         <div className={cn("px-6 py-5", presentation === "drawer" && "flex-1 overflow-y-auto")}>{children}</div>
         {footer ? (
-          <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+          <div className="flex flex-wrap justify-end gap-3 border-t border-border px-6 py-4">
             {footer}
           </div>
         ) : null}

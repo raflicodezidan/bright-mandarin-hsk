@@ -27,7 +27,7 @@ export function Pagination({
       <p className="text-xs text-text-muted">
         Menampilkan {first}-{last} dari {totalItems}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {page > 1 ? (
           <Link href={hrefForPage(page - 1)} className={linkClass}>
             Sebelumnya

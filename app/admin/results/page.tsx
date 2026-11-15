@@ -124,7 +124,7 @@ export default async function ResultsPage({
       <div className="flex flex-col gap-4">
         <form
           method="get"
-          className="grid grid-cols-1 gap-3 border-b border-[#DCD9D0] pb-4 sm:grid-cols-2 lg:grid-cols-6"
+          className="grid grid-cols-1 gap-3 border-b border-[#DCD9D0] pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
         >
           <div className="flex flex-col gap-1">
             <label htmlFor="student" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
