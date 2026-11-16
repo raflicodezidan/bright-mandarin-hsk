@@ -52,20 +52,7 @@ export default async function LoginPage() {
             Portal Murid
           </p>
 
-          <p className="mb-3 mt-5 inline-flex items-center gap-2 rounded-[2px] border border-[#C5D8C9] bg-[#E6EFE8] px-2.5 py-1 text-[11px] font-medium leading-4 text-[#1B5E3A]">
-            <span
-              aria-hidden="true"
-              className="size-[5px] shrink-0 bg-[#1B5E3A]"
-            />
-            <span>
-              <span lang="zh-Hans" className="font-cjk">
-                加油
-              </span>{" "}
-              (Jiāyóu) · Semangat belajar hari ini
-            </span>
-          </p>
-
-          <h1 className="text-[20px] font-bold leading-7 tracking-[-0.02em] text-[#18181B]">
+          <h1 className="mt-6 text-[20px] font-bold leading-7 tracking-[-0.02em] text-[#18181B]">
             Masuk ke Akun Murid
           </h1>
           <p className="mt-1 text-[13px] leading-5 text-[#52525B]">
@@ -74,12 +61,6 @@ export default async function LoginPage() {
         </header>
 
         <LoginForm />
-
-        <footer className="border-t border-[#DCD9D0] bg-[#F8F7F3] px-7 py-3.5 text-center">
-          <p className="text-[12px] leading-4 text-[#71717A]">
-            Hubungi pengajar jika lupa password.
-          </p>
-        </footer>
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
@@ -70,16 +70,23 @@ export function LoginForm() {
             required
             disabled={pending}
             placeholder="Masukkan password"
-            className={`${fieldClass} pr-24`}
+            className={`${fieldClass} pr-11`}
           />
           <button
             type="button"
             onClick={() => setShowPassword((current) => !current)}
             disabled={pending}
             aria-pressed={showPassword}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-[12px] font-medium text-[#52525B] transition-colors duration-150 hover:text-[#18181B] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#18181B] disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={
+              showPassword ? "Sembunyikan password" : "Tampilkan password"
+            }
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-[#52525B] transition-colors duration-150 hover:text-[#18181B] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#18181B] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {showPassword ? "Sembunyikan" : "Lihat"}
+            {showPassword ? (
+              <EyeOff size={16} strokeWidth={1.5} aria-hidden="true" />
+            ) : (
+              <Eye size={16} strokeWidth={1.5} aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
@@ -98,6 +105,10 @@ export function LoginForm() {
         ) : null}
         Masuk
       </button>
+
+      <p className="text-center text-[12px] leading-4 text-[#71717A]">
+        Hubungi pengajar jika lupa password.
+      </p>
     </form>
   );
 }
