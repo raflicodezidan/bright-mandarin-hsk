@@ -266,18 +266,18 @@ export default async function ResultsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-full min-w-[140px]">Murid</TableHead>
-                  <TableHead>Tes</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Mulai</TableHead>
-                  <TableHead>Selesai</TableHead>
-                  <TableHead numeric>Durasi</TableHead>
-                  <TableHead numeric>Benar</TableHead>
-                  <TableHead numeric>Persen</TableHead>
-                  <TableHead numeric>Listening</TableHead>
-                  <TableHead numeric>Reading</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-20 text-right">Aksi</TableHead>
+                  <TableHead className="w-[14%] min-w-[140px]">Murid</TableHead>
+                  <TableHead className="w-[18%]">Tes</TableHead>
+                  <TableHead className="w-[5%]">Level</TableHead>
+                  <TableHead className="w-[10%]">Mulai</TableHead>
+                  <TableHead className="w-[10%]">Selesai</TableHead>
+                  <TableHead numeric className="w-[6%]">Durasi</TableHead>
+                  <TableHead numeric className="w-[6%]">Benar</TableHead>
+                  <TableHead numeric className="w-[6%]">Persen</TableHead>
+                  <TableHead numeric className="w-[7%]">Listening</TableHead>
+                  <TableHead numeric className="w-[7%]">Reading</TableHead>
+                  <TableHead className="w-[7%]">Status</TableHead>
+                  <TableHead className="w-16 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

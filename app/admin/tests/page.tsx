@@ -64,20 +64,20 @@ export default async function AdminTestsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-full min-w-[160px]">Judul</TableHead>
-              <TableHead numeric className="w-20">
+              <TableHead className="w-[30%] min-w-[160px]">Judul</TableHead>
+              <TableHead numeric className="w-[9%]">
                 Level
               </TableHead>
-              <TableHead numeric className="w-24">
+              <TableHead numeric className="w-[11%]">
                 Durasi
               </TableHead>
-              <TableHead numeric className="w-16">
+              <TableHead numeric className="w-[8%]">
                 Soal
               </TableHead>
-              <TableHead numeric className="w-28">
+              <TableHead numeric className="w-[12%]">
                 Pengerjaan
               </TableHead>
-              <TableHead className="w-24">Status</TableHead>
+              <TableHead className="w-[14%]">Status</TableHead>
               <TableHead className="w-16 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
