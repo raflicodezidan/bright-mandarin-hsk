@@ -138,10 +138,10 @@ export default async function StudentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Nama</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
+                  <TableHead className="w-full min-w-[160px] text-[11px] uppercase tracking-[0.08em]">Nama</TableHead>
+                  <TableHead className="w-40 text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
+                  <TableHead className="w-24 text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
+                  <TableHead className="w-36 text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
                   <TableHead className="w-16 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -149,7 +149,7 @@ export default async function StudentsPage({
                 {students.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell className="font-mono text-xs tabular">
+                    <TableCell className="whitespace-nowrap font-mono text-xs tabular">
                       {student.username}
                     </TableCell>
                     <TableCell>
@@ -159,7 +159,7 @@ export default async function StudentsPage({
                         <Badge tone="muted">Nonaktif</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs tabular text-text-muted">
+                    <TableCell className="whitespace-nowrap font-mono text-xs tabular text-text-muted">
                       {formatDate(student.created_at)}
                     </TableCell>
                     <TableCell className="text-right">

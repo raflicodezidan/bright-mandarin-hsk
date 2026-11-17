@@ -266,7 +266,7 @@ export default async function ResultsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Murid</TableHead>
+                  <TableHead className="w-full min-w-[140px]">Murid</TableHead>
                   <TableHead>Tes</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead>Mulai</TableHead>
@@ -302,10 +302,10 @@ export default async function ResultsPage({
                       </TableCell>
                       <TableCell>{attempt.tests?.title ?? "-"}</TableCell>
                       <TableCell>HSK {attempt.tests?.level ?? "-"}</TableCell>
-                      <TableCell className="text-text-muted">
+                      <TableCell className="whitespace-nowrap text-text-muted">
                         {formatDateTime(attempt.started_at)}
                       </TableCell>
-                      <TableCell className="text-text-muted">
+                      <TableCell className="whitespace-nowrap text-text-muted">
                         {attempt.submitted_at
                           ? formatDateTime(attempt.submitted_at)
                           : "-"}

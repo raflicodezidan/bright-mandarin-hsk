@@ -75,7 +75,7 @@ export function TableHead({
     <th
       scope="col"
       className={cn(
-        "sticky top-0 h-10 border-r border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]",
+        "sticky top-0 h-10 whitespace-nowrap border-r border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]",
         numeric ? "text-right tabular" : "text-left",
         className,
       )}
@@ -96,7 +96,7 @@ export function TableCell({
     <td
       className={cn(
         "border-r border-border px-4 py-3 align-middle text-sm text-text",
-        numeric && "text-right tabular",
+        numeric && "whitespace-nowrap text-right tabular",
         className,
       )}
       {...props}

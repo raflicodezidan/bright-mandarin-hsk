@@ -10,8 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DeleteTestButton } from "@/components/admin/tests/delete-test-button";
-import { DuplicateTestButton } from "@/components/admin/tests/duplicate-test-button";
+import { TestRowActions } from "@/components/admin/tests/test-row-actions";
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/format";
 import Link from "next/link";
@@ -65,7 +64,7 @@ export default async function AdminTestsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[220px]">Judul</TableHead>
+              <TableHead className="w-full min-w-[160px]">Judul</TableHead>
               <TableHead numeric className="w-20">
                 Level
               </TableHead>
@@ -78,8 +77,8 @@ export default async function AdminTestsPage() {
               <TableHead numeric className="w-28">
                 Pengerjaan
               </TableHead>
-              <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-44 text-right">Aksi</TableHead>
+              <TableHead className="w-24">Status</TableHead>
+              <TableHead className="w-16 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,22 +101,14 @@ export default async function AdminTestsPage() {
                 <TableCell>
                   <TestStatusBadge status={test.status} />
                 </TableCell>
-                <TableCell>
-                  <div className="flex min-w-[240px] items-center justify-end gap-2">
-                    <DuplicateTestButton testId={test.id} title={test.title} />
-                    <LinkButton
-                      href={`/admin/tests/${test.id}`}
-                      size="sm"
-                      variant="secondary"
-                    >
-                      Kelola
-                    </LinkButton>
-                    <DeleteTestButton
-                      testId={test.id}
-                      title={test.title}
-                      hasAttempts={(attemptCounts.get(test.id) ?? 0) > 0}
-                    />
-                  </div>
+                <TableCell className="text-right">
+                  <TestRowActions
+                    test={{
+                      id: test.id,
+                      title: test.title,
+                      hasAttempts: (attemptCounts.get(test.id) ?? 0) > 0,
+                    }}
+                  />
                 </TableCell>
               </TableRow>
             ))}
