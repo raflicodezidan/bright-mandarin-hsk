@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { StorageCard } from "@/components/admin/storage-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AttemptStatusBadge } from "@/components/ui/badge";
 import {
@@ -14,6 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
+import { getStorageUsage } from "@/lib/storage-usage";
 import { percentage, todayWibRange } from "@/lib/attempts";
 
 export const metadata = { title: "Dashboard" };
@@ -25,7 +27,7 @@ export default async function AdminDashboardPage() {
 
   await supabase.rpc("finalize_expired_attempts");
 
-  const [students, openTests, inProgress, finishedToday, latest] =
+  const [students, openTests, inProgress, finishedToday, latest, storage] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -53,6 +55,7 @@ export default async function AdminDashboardPage() {
         )
         .order("started_at", { ascending: false })
         .limit(10),
+      getStorageUsage(),
     ]);
 
   const rows = latest.data ?? [];
@@ -84,6 +87,14 @@ export default async function AdminDashboardPage() {
             tone="accent"
           />
         </div>
+
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold text-text">Penyimpanan</h2>
+          <StorageCard
+            usage={storage.ok ? storage.data : null}
+            error={storage.ok ? undefined : storage.error}
+          />
+        </section>
 
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">

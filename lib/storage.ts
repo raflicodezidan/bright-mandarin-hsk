@@ -1,8 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const BUCKET = "question-media";
+export const STORAGE_BUCKET = "question-media";
+export const STORAGE_USAGE_TAG = "storage-usage";
 
 export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3"] as const;
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -56,13 +58,14 @@ export async function uploadMedia(
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const uploaded = await admin.storage
-    .from(BUCKET)
+    .from(STORAGE_BUCKET)
     .upload(path, buffer, { contentType: file.type, upsert: false });
 
   if (uploaded.error) {
     return { ok: false, error: "Gagal mengunggah media. Coba lagi." };
   }
 
+  revalidateTag(STORAGE_USAGE_TAG, "max");
   return { ok: true, path };
 }
 
@@ -74,15 +77,17 @@ export async function copyMedia(sourcePath: string): Promise<string | null> {
   const extension = filename.includes(".") ? filename.split(".").pop() : "bin";
   const target = `${folder || "misc"}/${randomUUID()}.${extension}`;
 
-  const copied = await admin.storage.from(BUCKET).copy(sourcePath, target);
+  const copied = await admin.storage.from(STORAGE_BUCKET).copy(sourcePath, target);
   if (copied.error) return null;
+  revalidateTag(STORAGE_USAGE_TAG, "max");
   return target;
 }
 
 export async function removeMedia(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   const admin = createAdminClient();
-  await admin.storage.from(BUCKET).remove(paths);
+  const removed = await admin.storage.from(STORAGE_BUCKET).remove(paths);
+  if (!removed.error) revalidateTag(STORAGE_USAGE_TAG, "max");
 }
 
 export async function signMedia(
@@ -91,6 +96,6 @@ export async function signMedia(
 ): Promise<string | null> {
   if (!path) return null;
   const admin = createAdminClient();
-  const { data } = await admin.storage.from(BUCKET).createSignedUrl(path, expiresIn);
+  const { data } = await admin.storage.from(STORAGE_BUCKET).createSignedUrl(path, expiresIn);
   return data?.signedUrl ?? null;
 }

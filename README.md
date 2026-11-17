@@ -101,6 +101,7 @@ Dokumen acuan:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ya | client & server | anon/publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | ya (server) | server actions, route handler, script | **Jangan** pernah diberi prefix `NEXT_PUBLIC_` |
 | `STUDENT_EMAIL_DOMAIN` | ya | server, script | Domain email sintetis, default `students.brightmandarin.local` |
+| `STORAGE_QUOTA_BYTES` | tidak | server | Kuota penyimpanan untuk kartu dashboard. Default `1073741824` (1 GB, Supabase Free). |
 | `ADMIN_SEED_USERNAME` | untuk `seed:admin` | script | 3–30 karakter: huruf kecil, angka, titik, garis bawah |
 | `ADMIN_SEED_PASSWORD` | untuk `seed:admin` | script | Minimal 8 karakter |
 | `TEST_STUDENT_USERNAME` / `TEST_STUDENT_PASSWORD` | untuk `verify:security` | script | Akun murid uji |
