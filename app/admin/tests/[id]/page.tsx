@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { LinkButton } from "@/components/ui/link-button";
-import { Link2 } from "lucide-react";
+import { ArrowLeft, Link2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,10 @@ export default async function TestDetailPage({
         description={`HSK ${test.level} · ${formatDuration(test.duration_minutes)}`}
         actions={
           <>
+            <LinkButton href="/admin/tests" variant="secondary">
+              <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
+              Kembali
+            </LinkButton>
             <LinkButton
               href={`/admin/tests/${test.id}/preview`}
               variant="secondary"

@@ -142,9 +142,7 @@ export default async function StudentsPage({
                   <TableHead className="text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
-                  <TableHead className="w-12">
-                    <span className="sr-only">Aksi</span>
-                  </TableHead>
+                  <TableHead className="w-16 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

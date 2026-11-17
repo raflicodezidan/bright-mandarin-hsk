@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { LinkButton } from "@/components/ui/link-button";
 import { createClient } from "@/lib/supabase/server";
 import { requireStudent } from "@/lib/auth";
@@ -48,6 +49,7 @@ export default async function DonePage({
 
       <div>
         <LinkButton href="/tests" variant="secondary">
+          <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
           Kembali ke daftar tes
         </LinkButton>
       </div>

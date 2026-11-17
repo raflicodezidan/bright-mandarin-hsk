@@ -79,9 +79,7 @@ export default async function AdminTestsPage() {
                 Pengerjaan
               </TableHead>
               <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-44 text-right">
-                <span className="sr-only">Aksi</span>
-              </TableHead>
+              <TableHead className="w-44 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

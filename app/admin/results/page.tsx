@@ -277,9 +277,7 @@ export default async function ResultsPage({
                   <TableHead numeric>Listening</TableHead>
                   <TableHead numeric>Reading</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-20">
-                    <span className="sr-only">Aksi</span>
-                  </TableHead>
+                  <TableHead className="w-20 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

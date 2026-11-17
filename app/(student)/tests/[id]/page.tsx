@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { LinkButton } from "@/components/ui/link-button";
 import { createClient } from "@/lib/supabase/server";
@@ -87,6 +88,7 @@ export default async function TestInstructionsPage({
       <div className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-start">
         <StartTestButton testId={id} />
         <LinkButton href="/tests" variant="secondary" size="lg">
+          <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
           Kembali
         </LinkButton>
       </div>

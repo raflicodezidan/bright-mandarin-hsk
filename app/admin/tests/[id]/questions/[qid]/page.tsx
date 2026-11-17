@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { LinkButton } from "@/components/ui/link-button";
 import {
   QuestionForm,
   type QuestionFormInitial,
@@ -92,6 +94,12 @@ export default async function QuestionPage({
       <PageHeader
         title={qid === "new" ? "Tambah soal" : "Edit soal"}
         description={test.data.title}
+        actions={
+          <LinkButton href={`/admin/tests/${id}`} variant="secondary">
+            <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
+            Kembali
+          </LinkButton>
+        }
       />
       <QuestionForm
         testId={id}

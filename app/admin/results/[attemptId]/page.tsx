@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { LinkButton } from "@/components/ui/link-button";
 import { Badge, AttemptStatusBadge } from "@/components/ui/badge";
@@ -97,6 +98,7 @@ export default async function ResultDetailPage({
               testTitle={testTitle}
             />
             <LinkButton href="/admin/results" variant="secondary">
+              <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
               Kembali
             </LinkButton>
           </>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -66,6 +67,7 @@ export default async function PreviewPage({
         description={test.data.title}
         actions={
           <LinkButton href={`/admin/tests/${id}`} variant="secondary">
+            <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
             Kembali
           </LinkButton>
         }
