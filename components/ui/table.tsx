@@ -7,9 +7,12 @@ export type TableProps = React.TableHTMLAttributes<HTMLTableElement> & {
 
 export function Table({ className, caption, children, ...props }: TableProps) {
   return (
-    <div className="w-full overflow-x-auto border-y border-border">
+    <div className="w-full overflow-x-auto">
       <table
-        className={cn("w-full border-collapse text-left text-sm", className)}
+        className={cn(
+          "w-full border-collapse border border-border text-left text-sm",
+          className,
+        )}
         {...props}
       >
         {caption ? (
@@ -72,7 +75,7 @@ export function TableHead({
     <th
       scope="col"
       className={cn(
-        "sticky top-0 h-10 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]",
+        "sticky top-0 h-10 border-r border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#71717A]",
         numeric ? "text-right tabular" : "text-left",
         className,
       )}
@@ -92,7 +95,7 @@ export function TableCell({
   return (
     <td
       className={cn(
-        "px-4 py-3 align-middle text-sm text-text",
+        "border-r border-border px-4 py-3 align-middle text-sm text-text",
         numeric && "text-right tabular",
         className,
       )}
