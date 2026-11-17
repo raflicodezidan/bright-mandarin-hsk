@@ -116,7 +116,8 @@ export default async function AdminDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Murid</TableHead>
+                  <TableHead>No</TableHead>
+                <TableHead>Murid</TableHead>
                   <TableHead>Tes</TableHead>
                   <TableHead numeric>Benar</TableHead>
                   <TableHead numeric>Persentase</TableHead>
@@ -125,10 +126,13 @@ export default async function AdminDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => {
+                {rows.map((row, index) => {
                   const percent = percentage(row.correct_count, row.total_count);
                   return (
                     <TableRow key={row.id}>
+                      <TableCell className="font-mono text-xs tabular">
+                        {index + 1}
+                      </TableCell>
                       <TableCell>
                         <Link
                           href={`/admin/results/${row.id}`}

@@ -138,7 +138,8 @@ export default async function StudentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[26%] min-w-[160px] text-[11px] uppercase tracking-[0.08em]">Nama</TableHead>
+                  <TableHead className="w-12">No</TableHead>
+              <TableHead className="w-[26%] min-w-[160px] text-[11px] uppercase tracking-[0.08em]">Nama</TableHead>
                   <TableHead className="w-[24%] text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
                   <TableHead className="w-[16%] text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
                   <TableHead className="w-[20%] text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
@@ -146,8 +147,11 @@ export default async function StudentsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.map((student) => (
+                {students.map((student, index) => (
                   <TableRow key={student.id}>
+                    <TableCell className="font-mono text-xs tabular">
+                      {(page - 1) * PAGE_SIZE + index + 1}
+                    </TableCell>
                     <TableCell className="font-medium">{student.full_name}</TableCell>
                     <TableCell className="whitespace-nowrap font-mono text-xs tabular">
                       {student.username}

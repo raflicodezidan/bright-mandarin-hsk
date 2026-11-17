@@ -266,6 +266,7 @@ export default async function ResultsPage({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">No</TableHead>
                   <TableHead className="w-[14%] min-w-[140px]">Murid</TableHead>
                   <TableHead className="w-[18%]">Tes</TableHead>
                   <TableHead className="w-[5%]">Level</TableHead>
@@ -281,7 +282,7 @@ export default async function ResultsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attempts.map((attempt) => {
+                {attempts.map((attempt, index) => {
                   const percent = percentage(
                     attempt.correct_count,
                     attempt.total_count,
@@ -292,6 +293,9 @@ export default async function ResultsPage({
                   );
                   return (
                     <TableRow key={attempt.id}>
+                      <TableCell className="font-mono text-xs tabular">
+                        {(filters.page - 1) * PAGE_SIZE + index + 1}
+                      </TableCell>
                       <TableCell>
                         <Link
                           href={`/admin/results/${attempt.id}`}

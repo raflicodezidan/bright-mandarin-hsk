@@ -64,6 +64,7 @@ export default async function AdminTestsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">No</TableHead>
               <TableHead className="w-[30%] min-w-[160px]">Judul</TableHead>
               <TableHead numeric className="w-[9%]">
                 Level
@@ -82,8 +83,9 @@ export default async function AdminTestsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tests.map((test) => (
+            {tests.map((test, index) => (
               <TableRow key={test.id}>
+                <TableCell className="font-mono text-xs tabular">{index + 1}</TableCell>
                 <TableCell className="font-medium">
                   <Link
                     href={`/admin/tests/${test.id}`}
