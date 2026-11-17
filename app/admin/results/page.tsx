@@ -277,7 +277,7 @@ export default async function ResultsPage({
                   <TableHead numeric className="w-[7%]">Listening</TableHead>
                   <TableHead numeric className="w-[7%]">Reading</TableHead>
                   <TableHead className="w-[7%]">Status</TableHead>
-                  <TableHead className="w-16 text-right">Aksi</TableHead>
+                  <TableHead className="w-16 text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -331,7 +331,7 @@ export default async function ResultsPage({
                       <TableCell>
                         <AttemptStatusBadge status={attempt.status} />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         <ResetAttemptButton
                           attemptId={attempt.id}
                           studentName={attempt.profiles?.full_name ?? "murid"}

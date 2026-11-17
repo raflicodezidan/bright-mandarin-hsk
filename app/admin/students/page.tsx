@@ -142,7 +142,7 @@ export default async function StudentsPage({
                   <TableHead className="w-[24%] text-[11px] uppercase tracking-[0.08em]">Username</TableHead>
                   <TableHead className="w-[16%] text-[11px] uppercase tracking-[0.08em]">Status</TableHead>
                   <TableHead className="w-[20%] text-[11px] uppercase tracking-[0.08em]">Dibuat</TableHead>
-                  <TableHead className="w-16 text-right">Aksi</TableHead>
+                  <TableHead className="w-16 text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -162,7 +162,7 @@ export default async function StudentsPage({
                     <TableCell className="whitespace-nowrap font-mono text-xs tabular text-text-muted">
                       {formatDate(student.created_at)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-center">
                       <StudentRowActions
                         student={{
                           id: student.id,

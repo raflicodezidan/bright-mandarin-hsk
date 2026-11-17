@@ -78,7 +78,7 @@ export default async function AdminTestsPage() {
                 Pengerjaan
               </TableHead>
               <TableHead className="w-[14%]">Status</TableHead>
-              <TableHead className="w-16 text-right">Aksi</TableHead>
+              <TableHead className="w-16 text-center">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -101,7 +101,7 @@ export default async function AdminTestsPage() {
                 <TableCell>
                   <TestStatusBadge status={test.status} />
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-center">
                   <TestRowActions
                     test={{
                       id: test.id,
