@@ -1,10 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const STORAGE_BUCKET = "question-media";
 export const STORAGE_USAGE_TAG = "storage-usage";
+export const STORAGE_FILES_TAG = "storage-files";
 
 const PAGE_SIZE = 1000;
 const MAX_DEPTH = 5;
@@ -69,6 +71,7 @@ export async function uploadMedia(
   }
 
   revalidateTag(STORAGE_USAGE_TAG, "max");
+  revalidateTag(STORAGE_FILES_TAG, "max");
   return { ok: true, path };
 }
 
@@ -83,6 +86,7 @@ export async function copyMedia(sourcePath: string): Promise<string | null> {
   const copied = await admin.storage.from(STORAGE_BUCKET).copy(sourcePath, target);
   if (copied.error) return null;
   revalidateTag(STORAGE_USAGE_TAG, "max");
+  revalidateTag(STORAGE_FILES_TAG, "max");
   return target;
 }
 
@@ -90,7 +94,10 @@ export async function removeMedia(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   const admin = createAdminClient();
   const removed = await admin.storage.from(STORAGE_BUCKET).remove(paths);
-  if (!removed.error) revalidateTag(STORAGE_USAGE_TAG, "max");
+  if (!removed.error) {
+    revalidateTag(STORAGE_USAGE_TAG, "max");
+    revalidateTag(STORAGE_FILES_TAG, "max");
+  }
 }
 
 export async function signMedia(
@@ -153,10 +160,8 @@ async function collectFiles(
   return out;
 }
 
-export async function listStorageFiles(): Promise<
-  { ok: true; data: StorageFile[] } | { ok: false; error: string }
-> {
-  try {
+const cachedStorageFiles = unstable_cache(
+  async (): Promise<StorageFile[]> => {
     const admin = createAdminClient();
     const files = await collectFiles(admin, "", 0);
 
@@ -171,14 +176,22 @@ export async function listStorageFiles(): Promise<
       if (row.audio_path) referenced.add(row.audio_path);
     }
 
-    const data = files
+    return files
       .map((file) => ({
         ...file,
         referenced: referenced.has(file.path),
       }))
       .sort((a, b) => b.size - a.size);
+  },
+  ["storage-files", STORAGE_BUCKET],
+  { revalidate: 300, tags: [STORAGE_FILES_TAG, STORAGE_USAGE_TAG] },
+);
 
-    return { ok: true, data };
+export async function listStorageFiles(): Promise<
+  { ok: true; data: StorageFile[] } | { ok: false; error: string }
+> {
+  try {
+    return { ok: true, data: await cachedStorageFiles() };
   } catch (error) {
     console.error("[storage] gagal memuat daftar file", error);
     return {
@@ -217,6 +230,7 @@ export async function deleteStorageFile(
     if (error) throw error;
 
     revalidateTag(STORAGE_USAGE_TAG, "max");
+    revalidateTag(STORAGE_FILES_TAG, "max");
     revalidatePath("/admin/storage");
     revalidatePath("/admin");
     return { ok: true };

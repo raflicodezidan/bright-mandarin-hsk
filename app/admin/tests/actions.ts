@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,6 +8,7 @@ import {
   copyMedia,
   removeMedia,
   uploadMedia,
+  STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
   questionSchema,
@@ -236,6 +237,7 @@ export async function saveQuestionAction(
   }
 
   revalidatePath(`/admin/tests/${testId}`);
+  revalidateTag(STORAGE_FILES_TAG, "max");
   return { ok: true, data: { questionId: data } };
 }
 
@@ -297,6 +299,7 @@ export async function deleteQuestionAction(
   await removeMedia(orphans);
 
   revalidatePath(`/admin/tests/${question.test_id}`);
+  revalidateTag(STORAGE_FILES_TAG, "max");
   return { ok: true, data: undefined };
 }
 
