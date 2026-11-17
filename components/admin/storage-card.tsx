@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,14 @@ export function StorageCard({ usage, error }: StorageCardProps) {
           Penyimpanan hampir penuh. Hapus media soal yang tidak dipakai.
         </p>
       ) : null}
+      <div className="mt-3 border-t border-[#DCD9D0] pt-3">
+        <Link
+          href="/admin/storage"
+          className="text-xs text-primary underline-offset-2 hover:underline"
+        >
+          Kelola file penyimpanan
+        </Link>
+      </div>
     </Card>
   );
 }

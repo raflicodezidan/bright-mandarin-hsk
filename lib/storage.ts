@@ -1,10 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const STORAGE_BUCKET = "question-media";
 export const STORAGE_USAGE_TAG = "storage-usage";
+
+const PAGE_SIZE = 1000;
+const MAX_DEPTH = 5;
 
 export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3"] as const;
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -98,4 +101,130 @@ export async function signMedia(
   const admin = createAdminClient();
   const { data } = await admin.storage.from(STORAGE_BUCKET).createSignedUrl(path, expiresIn);
   return data?.signedUrl ?? null;
+}
+
+export type StorageFile = {
+  path: string;
+  size: number;
+  updatedAt: string | null;
+  referenced: boolean;
+};
+
+async function collectFiles(
+  admin: ReturnType<typeof createAdminClient>,
+  prefix: string,
+  depth: number,
+): Promise<{ path: string; size: number; updatedAt: string | null }[]> {
+  if (depth > MAX_DEPTH) return [];
+
+  const out: { path: string; size: number; updatedAt: string | null }[] = [];
+  let offset = 0;
+
+  for (;;) {
+    const { data, error } = await admin.storage
+      .from(STORAGE_BUCKET)
+      .list(prefix, {
+        limit: PAGE_SIZE,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      });
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    for (const entry of data) {
+      if (entry.id === null) {
+        const childPrefix = prefix ? `${prefix}/${entry.name}` : entry.name;
+        out.push(...(await collectFiles(admin, childPrefix, depth + 1)));
+      } else {
+        const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+        out.push({
+          path,
+          size: entry.metadata?.size ?? 0,
+          updatedAt: entry.updated_at ?? entry.created_at ?? null,
+        });
+      }
+    }
+
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  return out;
+}
+
+export async function listStorageFiles(): Promise<
+  { ok: true; data: StorageFile[] } | { ok: false; error: string }
+> {
+  try {
+    const admin = createAdminClient();
+    const files = await collectFiles(admin, "", 0);
+
+    const { data: questions, error: qError } = await admin
+      .from("questions")
+      .select("image_path, audio_path");
+    if (qError) throw qError;
+
+    const referenced = new Set<string>();
+    for (const row of questions ?? []) {
+      if (row.image_path) referenced.add(row.image_path);
+      if (row.audio_path) referenced.add(row.audio_path);
+    }
+
+    const data = files
+      .map((file) => ({
+        ...file,
+        referenced: referenced.has(file.path),
+      }))
+      .sort((a, b) => b.size - a.size);
+
+    return { ok: true, data };
+  } catch (error) {
+    console.error("[storage] gagal memuat daftar file", error);
+    return {
+      ok: false,
+      error: "Gagal memuat daftar file penyimpanan. Coba muat ulang halaman.",
+    };
+  }
+}
+
+export async function deleteStorageFile(
+  path: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!path || path.includes("..") || path.startsWith("/")) {
+    return { ok: false, error: "Path file tidak valid." };
+  }
+
+  try {
+    const admin = createAdminClient();
+
+    const { data: refs, error: refError } = await admin
+      .from("questions")
+      .select("id")
+      .or(`image_path.eq.${path},audio_path.eq.${path}`)
+      .limit(1);
+    if (refError) throw refError;
+
+    if (refs && refs.length > 0) {
+      return {
+        ok: false,
+        error:
+          "File masih dipakai oleh soal. Ubah atau hapus soal terkait terlebih dahulu.",
+      };
+    }
+
+    const { error } = await admin.storage.from(STORAGE_BUCKET).remove([path]);
+    if (error) throw error;
+
+    revalidateTag(STORAGE_USAGE_TAG, "max");
+    revalidatePath("/admin/storage");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (error) {
+    console.error("[storage] gagal menghapus file", error);
+    return {
+      ok: false,
+      error: "Gagal menghapus file. Coba lagi.",
+    };
+  }
 }

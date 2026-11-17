@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ClipboardList,
   FileText,
+  HardDrive,
   LayoutDashboard,
   Menu,
   Users,
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/admin/results", label: "Hasil", icon: ClipboardList, exact: false },
   { href: "/admin/students", label: "Murid", icon: Users, exact: false },
   { href: "/admin/tests", label: "Tes", icon: FileText, exact: false },
+  { href: "/admin/storage", label: "Penyimpanan", icon: HardDrive, exact: false },
 ] as const;
 
 export type AdminShellProps = {
