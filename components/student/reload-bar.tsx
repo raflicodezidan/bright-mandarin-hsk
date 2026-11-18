@@ -13,7 +13,7 @@ export function ReloadBar({ checkedAt }: { checkedAt: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-[12px] text-[#71717A]">
         Nilai hanya dapat dilihat oleh pengajar.
       </p>
@@ -24,6 +24,7 @@ export function ReloadBar({ checkedAt }: { checkedAt: string }) {
         <Button
           variant="secondary"
           size="sm"
+          className="px-3 py-1.5 text-[12px] font-medium"
           onClick={reload}
           loading={pending}
         >

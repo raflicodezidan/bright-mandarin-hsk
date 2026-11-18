@@ -127,6 +127,15 @@
   animation: dialog-backdrop-in 150ms ease-out;
 }
 
-@utility dialog-panel {
-  animation: dialog-panel-in 180ms ease-out;
+@keyframes drawer-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@utility drawer-panel {
+  animation: drawer-panel-in 200ms ease-out;
 }

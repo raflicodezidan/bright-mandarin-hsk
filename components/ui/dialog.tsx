@@ -104,7 +104,7 @@ export function Dialog({
         tabIndex={-1}
         className={cn(
           presentation === "drawer"
-            ? "relative flex h-full w-full flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
+            ? "relative flex h-full w-full flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none drawer-panel"
             : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none dialog-panel",
         )}
         style={
