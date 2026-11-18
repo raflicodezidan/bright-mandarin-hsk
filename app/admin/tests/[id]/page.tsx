@@ -94,9 +94,11 @@ export default async function TestDetailPage({
         </div>
 
         {hasAttempts ? (
-          <Alert tone="warning" title="Soal dan durasi terkunci">
-            Tes ini sudah memiliki pengerjaan. Soal, opsi, kunci, dan durasi
-            tidak dapat diubah. Hanya judul dan deskripsi yang dapat diubah.
+          <Alert tone="warning" title="Pengeditan setelah pengerjaan">
+            Teks soal, teks opsi, dan kunci jawaban dapat diubah. Nilai pengerjaan
+            yang sudah selesai dihitung ulang dengan kunci terbaru. Untuk tes
+            yang sedang berlangsung, teks opsi yang sudah dipilih murid tidak
+            bisa diubah. Bagian, urutan, jumlah opsi, media, dan durasi terkunci.
           </Alert>
         ) : missingKey > 0 ? (
           <Alert tone="warning" title="Lengkapi kunci jawaban">
@@ -144,7 +146,8 @@ export default async function TestDetailPage({
           <QuestionList
             testId={test.id}
             items={listening}
-            locked={hasAttempts}
+            locked={false}
+            textOnly={hasAttempts}
           />
         </section>
 
@@ -164,7 +167,7 @@ export default async function TestDetailPage({
               Tambah soal
             </LinkButton>
           </div>
-          <QuestionList testId={test.id} items={reading} locked={hasAttempts} />
+          <QuestionList testId={test.id} items={reading} locked={false} textOnly={hasAttempts} />
         </section>
 
         <p className="flex items-center gap-2 text-xs text-text-muted">

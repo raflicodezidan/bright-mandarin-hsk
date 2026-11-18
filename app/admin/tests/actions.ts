@@ -12,6 +12,7 @@ import {
 } from "@/lib/storage";
 import {
   questionSchema,
+  questionTextUpdateSchema,
   testSchema,
   testStatusSchema,
 } from "@/lib/validation/tests";
@@ -239,6 +240,53 @@ export async function saveQuestionAction(
   revalidatePath(`/admin/tests/${testId}`);
   revalidateTag(STORAGE_FILES_TAG, "max");
   return { ok: true, data: { questionId: data } };
+}
+
+export async function updateQuestionTextAction(
+  formData: FormData,
+): Promise<TestActionResult> {
+  const denied = await guardAdmin();
+  if (denied) return denied;
+
+  let options: unknown;
+  try {
+    options = JSON.parse(String(formData.get("options") ?? "[]"));
+  } catch {
+    return { ok: false, error: "Teks opsi jawaban tidak valid." };
+  }
+
+  const parsed = questionTextUpdateSchema.safeParse({
+    testId: formData.get("testId"),
+    questionId: formData.get("questionId"),
+    prompt: formData.get("prompt"),
+    options,
+    correctLabel: formData.get("correctLabel"),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Teks soal tidak valid.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_question_text", {
+    p_test_id: parsed.data.testId,
+    p_question_id: parsed.data.questionId,
+    p_prompt: parsed.data.prompt,
+    p_options: parsed.data.options,
+    p_correct_label: parsed.data.correctLabel,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Gagal menyimpan perubahan teks soal."),
+    };
+  }
+
+  revalidatePath(`/admin/tests/${parsed.data.testId}`);
+  revalidatePath(`/admin/tests/${parsed.data.testId}/questions/${parsed.data.questionId}`);
+  return { ok: true, data: undefined };
 }
 
 export async function moveQuestionAction(

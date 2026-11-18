@@ -10,7 +10,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { deleteQuestionAction, saveQuestionAction } from "@/app/admin/tests/actions";
+import {
+  deleteQuestionAction,
+  saveQuestionAction,
+  updateQuestionTextAction,
+} from "@/app/admin/tests/actions";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type Section = Tables<"questions">["section"];
@@ -40,6 +44,7 @@ export function QuestionForm({
   imageUrl,
   audioUrl,
   locked = false,
+  textOnly = false,
 }: {
   testId: string;
   questionId: string;
@@ -49,6 +54,7 @@ export function QuestionForm({
   imageUrl: string | null;
   audioUrl: string | null;
   locked?: boolean;
+  textOnly?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -103,6 +109,29 @@ export function QuestionForm({
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (textOnly) {
+      const payload = new FormData();
+      payload.set("testId", testId);
+      payload.set("questionId", questionId);
+      payload.set("prompt", prompt);
+      payload.set("options", JSON.stringify(options.map((option, index) => ({
+        label: LABELS[index],
+        text: option.text.trim(),
+      }))));
+      payload.set("correctLabel", LABELS[correctIndex]);
+      startTransition(async () => {
+        const result = await updateQuestionTextAction(payload);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        toast("Teks soal, opsi, dan kunci diperbarui. Nilai dihitung ulang.");
+        router.push(`/admin/tests/${testId}`);
+        router.refresh();
+      });
+      return;
+    }
 
     if (options.length < 2 || options.length > 5) {
       setError("Soal harus memiliki 2 sampai 5 opsi.");
@@ -191,12 +220,20 @@ export function QuestionForm({
       <form onSubmit={onSubmit} className="flex max-w-[640px] flex-col gap-4">
         {error ? <Alert tone="error">{error}</Alert> : null}
 
+        {textOnly ? (
+          <Alert tone="warning" title="Pengeditan soal setelah pengerjaan">
+            Teks soal, teks opsi, dan kunci jawaban dapat diubah. Nilai pengerjaan
+            yang sudah selesai dihitung ulang dengan kunci terbaru. Bagian,
+            urutan, jumlah opsi, media, dan durasi tetap terkunci.
+          </Alert>
+        ) : null}
+
         <Field label="Bagian" htmlFor="question-section" required>
           <Select
             id="question-section"
             value={section}
             onChange={(event) => setSection(event.target.value as Section)}
-            disabled={pending}
+            disabled={pending || textOnly}
           >
             <option value="listening">Listening</option>
             <option value="reading">Reading</option>
@@ -243,6 +280,7 @@ export function QuestionForm({
                 required
                 disabled={pending}
               />
+            {!textOnly ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -254,9 +292,10 @@ export function QuestionForm({
               >
                 <span className="sr-only">Hapus</span>
               </Button>
+            ) : null}
             </div>
           ))}
-          {options.length < 5 ? (
+          {options.length < 5 && !textOnly ? (
             <div>
               <Button
                 variant="secondary"
@@ -290,7 +329,7 @@ export function QuestionForm({
                   value={LABELS[index]}
                   checked={correctIndex === index}
                   onChange={() => setCorrectIndex(index)}
-                  disabled={pending}
+                  disabled={pending || textOnly}
                   className="size-4 accent-[var(--color-primary)]"
                 />
                 {LABELS[index]}
@@ -326,14 +365,14 @@ export function QuestionForm({
                   </audio>
                 ) : null}
                 <div>
-                  <Button
+                  {!textOnly ? <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => setRemoveAudio(true)}
-                    disabled={pending}
+                disabled={pending}
                   >
                     Hapus audio
-                  </Button>
+                  </Button> : null}
                 </div>
               </div>
             ) : null}
@@ -379,7 +418,7 @@ export function QuestionForm({
                     variant="secondary"
                     size="sm"
                     onClick={() => setRemoveImage(true)}
-                    disabled={pending}
+                    disabled={pending || textOnly}
                   >
                     Hapus gambar
                   </Button>
@@ -397,7 +436,7 @@ export function QuestionForm({
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                disabled={pending}
+                disabled={pending || textOnly}
                 className="block w-full text-sm text-text file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-primary-hover disabled:file:opacity-60"
               />
             </div>
@@ -415,7 +454,7 @@ export function QuestionForm({
           >
             Batal
           </Button>
-          {questionId !== "new" && !locked ? (
+          {questionId !== "new" && !locked && !textOnly ? (
             <Button
               variant="danger"
               onClick={() => setConfirmDelete(true)}

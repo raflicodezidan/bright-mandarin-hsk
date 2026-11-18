@@ -45,5 +45,13 @@ export const questionSchema = z.object({
   correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
 });
 
+export const questionTextUpdateSchema = z.object({
+  testId: z.string().uuid(),
+  questionId: z.string().uuid(),
+  prompt: z.string().trim().min(1, "Teks soal wajib diisi.").max(4000),
+  options: z.array(questionOptionSchema).min(2).max(5),
+  correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
+});
+
 export type TestInput = z.infer<typeof testSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;

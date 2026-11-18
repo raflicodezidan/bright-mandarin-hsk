@@ -28,10 +28,12 @@ export function QuestionList({
   testId,
   items,
   locked,
+  textOnly = false,
 }: {
   testId: string;
   items: QuestionListItem[];
   locked: boolean;
+  textOnly?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -105,7 +107,7 @@ export function QuestionList({
               <button
                 type="button"
                 aria-label={`Naikkan soal ${item.number}`}
-                disabled={pending || locked || index === 0}
+                disabled={pending || locked || textOnly || index === 0}
                 onClick={() => move(item.id, -1)}
                 className="rounded-sm p-2 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
               >
@@ -114,28 +116,29 @@ export function QuestionList({
               <button
                 type="button"
                 aria-label={`Turunkan soal ${item.number}`}
-                disabled={pending || locked || index === items.length - 1}
+                disabled={pending || locked || textOnly || index === items.length - 1}
                 onClick={() => move(item.id, 1)}
                 className="rounded-sm p-2 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
               >
                 <ArrowDown size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
-              <Link
-                href={`/admin/tests/${testId}/questions/${item.id}`}
+                <Link
+                  href={`/admin/tests/${testId}/questions/${item.id}`}
                 aria-label={`Edit soal ${item.number}`}
-                className="rounded-sm p-2 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  aria-disabled={locked}
+                  className={`rounded-sm p-2 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${locked ? "pointer-events-none opacity-40" : ""}`}
               >
                 <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
               </Link>
               <button
                 type="button"
                 title={
-                  locked
-                    ? "Soal terkunci karena sudah ada pengerjaan"
+                  locked || textOnly
+                    ? "Penghapusan tidak tersedia setelah ada pengerjaan"
                     : "Hapus soal"
                 }
                 aria-label={`Hapus soal ${item.number}`}
-                disabled={pending || locked}
+                  disabled={pending || locked || textOnly}
                 onClick={() => {
                   setError(null);
                   setDeleting(item);

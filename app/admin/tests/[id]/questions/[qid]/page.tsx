@@ -36,7 +36,8 @@ export default async function QuestionPage({
     .select("id", { count: "exact", head: true })
     .eq("test_id", id);
 
-  const locked = (attempts.count ?? 0) > 0;
+  const hasAttempts = (attempts.count ?? 0) > 0;
+  const locked = hasAttempts && qid === "new";
 
   let initial: QuestionFormInitial | undefined;
   let existingImage: string | null = null;
@@ -110,6 +111,7 @@ export default async function QuestionPage({
         imageUrl={imageUrl}
         audioUrl={audioUrl}
         locked={locked}
+        textOnly={hasAttempts && qid !== "new"}
       />
     </>
   );

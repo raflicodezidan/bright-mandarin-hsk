@@ -370,6 +370,16 @@ export type Database = {
         Args: { p_test_id: string; p_media_map?: Json };
         Returns: string;
       };
+      update_question_text: {
+        Args: {
+          p_test_id: string;
+          p_question_id: string;
+          p_prompt: string;
+          p_options: Json;
+          p_correct_label: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: "admin" | "student";

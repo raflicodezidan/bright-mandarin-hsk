@@ -107,7 +107,7 @@ export function TestForm({
             id="test-level"
             value={level}
             onChange={(event) => setLevel(event.target.value)}
-            disabled={pending}
+            disabled={pending || lockedDuration}
           >
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <option key={item} value={item}>
