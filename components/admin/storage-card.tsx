@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { buttonClasses } from "@/components/ui/button";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StorageUsage } from "@/lib/storage-usage";
@@ -76,7 +77,7 @@ export function StorageCard({ usage, error }: StorageCardProps) {
       <div className="mt-3 border-t border-[#DCD9D0] pt-3">
         <Link
           href="/admin/storage"
-          className="text-xs text-primary underline-offset-2 hover:underline"
+          className={buttonClasses({ variant: "warning", size: "sm" })}
         >
           Kelola file penyimpanan
         </Link>

@@ -37,7 +37,7 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const [fullName, setFullName] = React.useState(student.fullName);
-  const [newPassword, setNewPassword] = React.useState<string | null>(null);
+  const [password, setPassword] = React.useState("");
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const menuContentRef = React.useRef<HTMLDivElement | null>(null);
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -83,7 +83,7 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
   function openDialog(next: NonNullable<typeof dialog>) {
     setMenuOpen(false);
     setError(null);
-    setNewPassword(null);
+    setPassword("");
     setFullName(student.fullName);
     setDialog(next);
   }
@@ -91,7 +91,7 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
   function closeDialog() {
     setDialog(null);
     setError(null);
-    setNewPassword(null);
+    setPassword("");
   }
 
   function saveName(event: React.FormEvent<HTMLFormElement>) {
@@ -112,16 +112,21 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
     });
   }
 
-  function resetPassword() {
+  function resetPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await resetStudentPasswordAction({ studentId: student.id });
+      const result = await resetStudentPasswordAction({
+        studentId: student.id,
+        password,
+      });
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setNewPassword(result.data.password);
-      toast("Password murid direset.");
+      toast("Password murid diperbarui.");
+      closeDialog();
+      router.refresh();
     });
   }
 
@@ -156,12 +161,6 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
       closeDialog();
       router.refresh();
     });
-  }
-
-  async function copyPassword() {
-    if (!newPassword) return;
-    await navigator.clipboard.writeText(newPassword);
-    toast("Password disalin.");
   }
 
   return (
@@ -266,44 +265,47 @@ export function StudentRowActions({ student }: { student: StudentRow }) {
         open={dialog === "reset"}
         onClose={closeDialog}
         title={`Reset password ${student.fullName}?`}
-        description="Password lama tidak berlaku lagi. Password baru hanya ditampilkan sekali."
+        description="Masukkan password baru untuk murid. Password lama tidak berlaku lagi."
         footer={
-          newPassword ? (
-            <Button onClick={closeDialog}>Selesai</Button>
-          ) : (
-            <>
-              <Button variant="secondary" onClick={closeDialog} disabled={pending}>
-                Batal
-              </Button>
-              <Button onClick={resetPassword} loading={pending}>
-                Reset password
-              </Button>
-            </>
-          )
+          <>
+            <Button variant="secondary" onClick={closeDialog} disabled={pending}>
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              form={`reset-password-${student.id}`}
+              loading={pending}
+            >
+              Simpan password
+            </Button>
+          </>
         }
       >
-        {newPassword ? (
-          <div className="flex flex-col gap-4">
-            <Alert tone="warning">
-              Salin password baru sekarang. Password tidak ditampilkan lagi.
-            </Alert>
-            <div className="flex items-center gap-2">
-              <span className="rounded-sm border border-border bg-surface-muted px-3 py-2 font-mono text-sm">
-                {newPassword}
-              </span>
-              <Button size="sm" variant="secondary" onClick={copyPassword}>
-                Salin
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {error ? <Alert tone="error">{error}</Alert> : null}
-            <p className="text-sm text-text-muted">
-              Password baru akan dibuat otomatis.
-            </p>
-          </div>
-        )}
+        <form
+          id={`reset-password-${student.id}`}
+          onSubmit={resetPassword}
+          className="flex flex-col gap-4"
+        >
+          {error ? <Alert tone="error">{error}</Alert> : null}
+          <Field
+            label="Password baru"
+            htmlFor={`reset-password-input-${student.id}`}
+            hint="Minimal 8 karakter. Sampaikan password ini langsung kepada murid."
+            required
+          >
+            <Input
+              id={`reset-password-input-${student.id}`}
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              minLength={8}
+              maxLength={100}
+              required
+              disabled={pending}
+            />
+          </Field>
+        </form>
       </Dialog>
 
       <Dialog

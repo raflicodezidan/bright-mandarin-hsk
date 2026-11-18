@@ -35,6 +35,11 @@ export const studentIdSchema = z.object({
   studentId: z.string().uuid(),
 });
 
+export const resetStudentPasswordSchema = z.object({
+  studentId: z.string().uuid(),
+  password: passwordSchema,
+});
+
 export const toggleStudentSchema = z.object({
   studentId: z.string().uuid(),
   isActive: z.boolean(),

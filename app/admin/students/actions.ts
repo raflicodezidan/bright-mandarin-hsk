@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
-import { generatePassword } from "@/lib/password";
 import {
   createStudentSchema,
+  resetStudentPasswordSchema,
   studentIdSchema,
   toggleStudentSchema,
   updateStudentSchema,
@@ -119,12 +119,18 @@ export async function updateStudentNameAction(input: {
 
 export async function resetStudentPasswordAction(input: {
   studentId: string;
-}): Promise<ActionResult<{ password: string }>> {
+  password: string;
+}): Promise<ActionResult> {
   const denied = await guardAdmin();
   if (denied) return denied;
 
-  const parsed = studentIdSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Data tidak valid." };
+  const parsed = resetStudentPasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Data tidak valid.",
+    };
+  }
 
   const admin = createAdminClient();
   const target = await admin
@@ -136,14 +142,13 @@ export async function resetStudentPasswordAction(input: {
 
   if (!target.data) return { ok: false, error: "Murid tidak ditemukan." };
 
-  const password = generatePassword(10);
   const updated = await admin.auth.admin.updateUserById(parsed.data.studentId, {
-    password,
+    password: parsed.data.password,
   });
 
   if (updated.error) return { ok: false, error: "Gagal mereset password." };
 
-  return { ok: true, data: { password } };
+  return { ok: true, data: undefined };
 }
 
 export async function toggleStudentActiveAction(input: {
