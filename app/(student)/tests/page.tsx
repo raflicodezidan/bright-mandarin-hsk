@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/ui/empty-state";
 import { ReloadBar } from "@/components/student/reload-bar";
 import {
   TestActions,
@@ -9,17 +10,16 @@ import { formatDuration, formatTime } from "@/lib/format";
 
 export const metadata = { title: "Tes" };
 
-type StatusMeta = { label: string; dot: string; color: string; mode: TestActionMode };
+type StatusMeta = { label: string; dot: string; mode: TestActionMode };
 
 const STATUS: Record<"open" | "in_progress" | "done", StatusMeta> = {
-  open: { label: "Terbuka", dot: "bg-[#1B5E3A]", color: "text-[#1B5E3A]", mode: "start" },
+  open: { label: "Terbuka", dot: "bg-[#1B5E3A]", mode: "start" },
   in_progress: {
     label: "Sedang dikerjakan",
     dot: "bg-[#D97706]",
-    color: "text-[#D97706]",
     mode: "resume",
   },
-  done: { label: "Selesai", dot: "bg-[#71717A]", color: "text-[#71717A]", mode: "done" },
+  done: { label: "Selesai", dot: "bg-[#71717A]", mode: "done" },
 };
 
 function Meta({
@@ -30,8 +30,8 @@ function Meta({
   value: string;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.06em] text-[#71717A]">
+    <div className="flex flex-col gap-1">
+      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
         {label}
       </span>
       <span className="font-mono text-[13px] font-medium tabular text-[#18181B]">
@@ -76,24 +76,22 @@ export default async function StudentTestsPage() {
 
   return (
     <>
-      <header className="mb-6 flex flex-col gap-1">
+      <header className="flex flex-col gap-1 pb-6">
         <h1 className="text-[24px] font-bold leading-8 tracking-[-0.02em] text-[#18181B]">
           Tes
         </h1>
-        <p className="mt-1 text-[13px] text-[#52525B]">
+        <p className="text-[13px] text-[#52525B]">
           Daftar evaluasi yang tersedia untuk dikerjakan.
         </p>
       </header>
 
       {summaries.length === 0 ? (
-        <div className="bg-[#FAF9F6] border border-[#DCD9D0] rounded-[3px] px-6 py-10">
-          <p className="text-[15px] font-semibold text-[#18181B]">Belum ada tes</p>
-          <p className="mt-1 text-[13px] text-[#52525B]">
-            Tes yang dibuka admin akan muncul di halaman ini.
-          </p>
-        </div>
+        <EmptyState
+          title="Belum ada tes"
+          description="Tes yang dibuka admin akan muncul di halaman ini."
+        />
       ) : (
-        <ul className="bg-[#FAF9F6] border border-[#DCD9D0] rounded-[3px] divide-y divide-[#DCD9D0]">
+        <ul className="divide-y divide-[#DCD9D0] border-y border-[#DCD9D0] bg-[#FAF9F6]">
           {summaries.map(({ test, summary }) => {
             const attempt = attemptsByTest.get(test.id);
             const status =
@@ -106,52 +104,43 @@ export default async function StudentTestsPage() {
             return (
               <li
                 key={test.id}
-                className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-[#F1EFE9] transition-colors"
+                className="flex flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"
               >
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <h2 className="truncate text-[15px] font-semibold text-[#18181B]">
-                    {test.title}
-                  </h2>
-                  <span className="flex items-center gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
                     <span
                       aria-hidden="true"
                       className={`size-[6px] shrink-0 rounded-[1px] ${status.dot}`}
                     />
-                    <span className={`text-[12px] font-medium ${status.color}`}>
+                    <h2 className="truncate text-[15px] font-semibold text-[#18181B]">
+                      {test.title}
+                    </h2>
+                    <span className="text-[12px] font-medium text-[#52525B]">
                       {status.label}
                     </span>
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:-mr-6 sm:flex-row sm:items-center">
-                  <div className="flex items-center divide-x divide-[#DCD9D0]">
-                    <div className="pr-4">
-                      <Meta label="Level" value={`HSK ${test.level}`} />
-                    </div>
-                    <div className="px-4">
-                      <Meta
-                        label="Soal"
-                        value={String(summary?.total_count ?? 0)}
-                      />
-                    </div>
-                    <div className="pl-4">
-                      <Meta
-                        label="Durasi"
-                        value={formatDuration(test.duration_minutes)}
-                      />
-                    </div>
                   </div>
-                  <div className="shrink-0 sm:ml-6">
-                    <TestActions
-                      testId={test.id}
-                      title={test.title}
-                      level={test.level}
-                      durationMinutes={test.duration_minutes}
-                      questionCount={summary?.total_count ?? 0}
-                      description={summary?.description}
-                      mode={status.mode}
+                  <dl className="grid grid-cols-3 gap-3 rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6] px-4 py-3">
+                    <Meta label="Level" value={`HSK ${test.level}`} />
+                    <Meta
+                      label="Soal"
+                      value={String(summary?.total_count ?? 0)}
                     />
-                  </div>
+                    <Meta
+                      label="Durasi"
+                      value={formatDuration(test.duration_minutes)}
+                    />
+                  </dl>
+                </div>
+                <div className="shrink-0 sm:pl-4">
+                  <TestActions
+                    testId={test.id}
+                    title={test.title}
+                    level={test.level}
+                    durationMinutes={test.duration_minutes}
+                    questionCount={summary?.total_count ?? 0}
+                    description={summary?.description}
+                    mode={status.mode}
+                  />
                 </div>
               </li>
             );

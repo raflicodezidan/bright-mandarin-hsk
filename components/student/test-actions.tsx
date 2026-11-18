@@ -96,8 +96,7 @@ export function TestActions({
         }}
         title={mode === "resume" ? "Lanjutkan tes" : "Konfirmasi tes"}
         description={title}
-        presentation="drawer"
-        drawerWidth={400}
+        size="sm"
         footer={
           <>
             <Button
