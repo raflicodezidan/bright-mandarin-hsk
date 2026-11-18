@@ -323,17 +323,37 @@ export function TakeClient({
             aria-current={active ? "true" : undefined}
             className={[
               "flex size-10 items-center justify-center rounded-sm border font-mono text-sm tabular transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              answered
-                ? "border-primary bg-primary-subtle text-primary"
-                : "border-border-strong bg-surface text-text",
+              failed
+                ? "border-2 border-accent bg-accent-subtle text-accent"
+                : answered
+                  ? "border-success bg-success-subtle text-success"
+                  : "border-accent bg-accent-subtle text-accent",
               active ? "outline-2 outline-offset-2 outline-primary" : "",
-              failed ? "border-accent text-accent" : "",
             ].join(" ")}
           >
             {question.number}
           </button>
         );
       })}
+    </div>
+  );
+
+  const navLegend = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
+      <span className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="size-2.5 rounded-[1px] border border-success bg-success-subtle"
+        />
+        Terjawab
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="size-2.5 rounded-[1px] border border-accent bg-accent-subtle"
+        />
+        Belum dijawab
+      </span>
     </div>
   );
 
@@ -460,6 +480,7 @@ export function TakeClient({
                 {answeredCount} dari {questions.length} terjawab
               </p>
               {navGrid}
+              {navLegend}
               <Button onClick={() => setConfirmOpen(true)}>Kumpulkan</Button>
             </div>
           </aside>
@@ -487,7 +508,10 @@ export function TakeClient({
           </>
         }
       >
-        {navGrid}
+        <div className="flex flex-col gap-3">
+          {navGrid}
+          {navLegend}
+        </div>
       </Dialog>
 
       <Dialog
