@@ -77,7 +77,7 @@ export function StorageCard({ usage, error }: StorageCardProps) {
       <div className="mt-3 border-t border-[#DCD9D0] pt-3">
         <Link
           href="/admin/storage"
-          className={buttonClasses({ variant: "warning", size: "sm" })}
+          className={buttonClasses({ variant: "primary", size: "sm" })}
         >
           Kelola file penyimpanan
         </Link>

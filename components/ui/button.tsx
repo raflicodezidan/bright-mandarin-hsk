@@ -1,13 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "neutral"
-  | "ghost"
-  | "danger"
-  | "warning";
+export type ButtonVariant = "primary" | "secondary" | "neutral" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
@@ -20,8 +14,6 @@ const variants: Record<ButtonVariant, string> = {
   neutral: "border-[#18181B] bg-[#18181B] text-[#F8F7F3] hover:bg-[#27272A]",
   ghost: "border-transparent bg-transparent text-[#18181B] hover:bg-[#ECEAE3]",
   danger: "border-[#8F2020] bg-[#A62626] text-[#F8F7F3] hover:bg-[#8A1F1F]",
-  warning:
-    "border-[#B45309] bg-[#D97706] text-[#18181B] hover:bg-[#F59E0B]",
 };
 
 const sizes: Record<ButtonSize, string> = {
