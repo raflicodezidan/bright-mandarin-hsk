@@ -98,7 +98,8 @@ export default async function TestDetailPage({
             Teks soal, teks opsi, dan kunci jawaban dapat diubah. Nilai pengerjaan
             yang sudah selesai dihitung ulang dengan kunci terbaru. Untuk tes
             yang sedang berlangsung, teks opsi yang sudah dipilih murid tidak
-            bisa diubah. Bagian, urutan, jumlah opsi, media, dan durasi terkunci.
+            bisa diubah. Bagian, urutan, dan jumlah opsi serta media terkunci.
+            Durasi baru berlaku untuk pengerjaan berikutnya.
           </Alert>
         ) : missingKey > 0 ? (
           <Alert tone="warning" title="Lengkapi kunci jawaban">

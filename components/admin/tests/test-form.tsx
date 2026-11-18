@@ -86,8 +86,9 @@ export function TestForm({
         {error ? <Alert tone="error">{error}</Alert> : null}
         {lockedDuration ? (
           <Alert tone="warning" title="Tes sudah memiliki pengerjaan">
-            Judul dan deskripsi masih dapat diubah. Durasi, soal, dan kunci
-            jawaban terkunci.
+            Judul, deskripsi, level HSK, dan durasi dapat diubah. Durasi baru
+            berlaku untuk pengerjaan berikutnya. Perubahan kunci jawaban akan
+            menghitung ulang nilai pengerjaan yang sudah selesai.
           </Alert>
         ) : null}
 
@@ -107,7 +108,7 @@ export function TestForm({
             id="test-level"
             value={level}
             onChange={(event) => setLevel(event.target.value)}
-            disabled={pending || lockedDuration}
+            disabled={pending}
           >
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <option key={item} value={item}>
@@ -126,7 +127,7 @@ export function TestForm({
             value={duration}
             onChange={(event) => setDuration(event.target.value)}
             required
-            disabled={pending || lockedDuration}
+            disabled={pending}
           />
         </Field>
 
