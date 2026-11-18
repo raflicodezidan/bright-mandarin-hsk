@@ -43,6 +43,7 @@ export function QuestionView({
 
       {question.audioUrl ? (
         <audio
+          key={question.audioUrl}
           controls
           preload="none"
           controlsList="nodownload"
