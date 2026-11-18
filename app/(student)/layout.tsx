@@ -15,7 +15,7 @@ export default async function StudentLayout({
       userName={profile.full_name}
       logout={
         <form action={logoutAction}>
-          <Button type="submit" variant="danger" size="sm">
+          <Button type="submit" variant="danger" size="sm" className="px-3.5 py-1.5 text-[13px] font-medium">
             Keluar
           </Button>
         </form>

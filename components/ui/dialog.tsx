@@ -8,13 +8,15 @@ import { cn } from "@/lib/utils";
 export type DialogProps = {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   children?: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "lg";
   presentation?: "dialog" | "drawer";
   drawerWidth?: number;
+  accentColor?: string;
+  examModal?: boolean;
 };
 
 const FOCUSABLE =
@@ -30,6 +32,8 @@ export function Dialog({
   size = "sm",
   presentation = "dialog",
   drawerWidth = 420,
+  accentColor = "#1B5E3A",
+  examModal = false,
 }: DialogProps) {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const onCloseRef = React.useRef(onClose);
@@ -92,7 +96,10 @@ export function Dialog({
       <button
         type="button"
         aria-label="Tutup dialog"
-        className="absolute inset-0 bg-black/20 dialog-backdrop"
+        className={cn(
+          "absolute inset-0 dialog-backdrop",
+          examModal ? "bg-[#18181B]/35 backdrop-blur-[2px]" : "bg-black/20",
+        )}
         onClick={onClose}
       />
       <div
@@ -105,17 +112,23 @@ export function Dialog({
         className={cn(
           presentation === "drawer"
             ? "relative flex h-full w-full flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
-            : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none dialog-panel",
+            : cn(
+                "relative flex w-full flex-col overflow-hidden border border-[#DCD9D0] outline-none",
+                examModal
+                  ? "rounded-[3px] bg-[#FAF9F6] exam-modal-panel"
+                  : "rounded-[2px] bg-surface dialog-panel",
+              ),
         )}
         style={
           presentation === "dialog"
-            ? { maxWidth: size === "sm" ? 480 : 640 }
+            ? { maxWidth: examModal ? 460 : size === "sm" ? 480 : 640, ...(examModal ? { "--exam-accent": accentColor } as React.CSSProperties : {}) }
             : { maxWidth: drawerWidth }
         }
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+        {examModal ? <div className="exam-modal-accent h-[3px] w-full bg-[var(--exam-accent)]" aria-hidden="true" /> : null}
+        <div className={cn("flex items-start justify-between gap-4 border-b border-border px-6 py-4", examModal && "bg-[#F8F7F3] exam-modal-block exam-modal-delay-1")}>
           <div className="flex flex-col gap-1">
-            <h2 id={titleId} className="text-base font-semibold text-text">
+            <h2 id={titleId} className={cn("text-base font-semibold text-text", examModal && "text-[18px] font-bold")}>
               {title}
             </h2>
             {description ? (
@@ -133,9 +146,9 @@ export function Dialog({
             <X size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
-        <div className={cn("px-6 py-5", presentation === "drawer" && "flex-1 overflow-y-auto")}>{children}</div>
+        <div className={cn("px-6 py-5", presentation === "drawer" && "flex-1 overflow-y-auto", examModal && "bg-[#FAF9F6] exam-modal-block exam-modal-delay-2")}>{children}</div>
         {footer ? (
-          <div className="flex flex-wrap justify-end gap-3 border-t border-border px-6 py-4">
+          <div className={cn("flex flex-wrap justify-end gap-3 border-t border-border px-6 py-4", examModal && "bg-[#F8F7F3] exam-modal-block exam-modal-delay-4")}>
             {footer}
           </div>
         ) : null}
