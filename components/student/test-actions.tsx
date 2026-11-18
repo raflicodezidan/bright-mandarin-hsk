@@ -96,8 +96,7 @@ export function TestActions({
         }}
         title={mode === "resume" ? "Lanjutkan tes" : "Konfirmasi tes"}
         description={title}
-        presentation="drawer"
-        drawerWidth={400}
+        size="sm"
         footer={
           <>
             <Button
@@ -120,7 +119,7 @@ export function TestActions({
         }
       >
         <div className="flex flex-col gap-5">
-          <dl className="grid grid-cols-3 gap-3 border-y border-[#DCD9D0] py-4">
+          <dl className="grid grid-cols-3 gap-3 rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6] px-4 py-4">
             <MetaItem label="Level" value={`HSK ${level}`} />
             <MetaItem label="Soal" value={String(questionCount)} />
             <MetaItem label="Durasi" value={`${durationMinutes} mnt`} />
@@ -136,7 +135,7 @@ export function TestActions({
             </p>
           </div>
 
-          <div className="border border-[#E0D1B7] bg-[#F3ECE0] px-4 py-3 text-[12px] leading-5 text-[#52525B]">
+          <div className="rounded-[3px] border border-[#E0D1B7] bg-[#F3ECE0] px-4 py-3 text-[12px] leading-5 text-[#52525B]">
             {mode === "resume"
               ? "Waktu terus berjalan sejak tes dimulai. Menutup tab atau kehilangan koneksi tidak menghentikan waktu."
               : "Tes hanya dapat dikerjakan satu kali dan waktu tidak dapat dihentikan. Menutup tab atau kehilangan koneksi tidak menghentikan waktu."}

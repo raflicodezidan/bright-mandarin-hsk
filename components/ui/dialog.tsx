@@ -92,7 +92,7 @@ export function Dialog({
       <button
         type="button"
         aria-label="Tutup dialog"
-        className="absolute inset-0 bg-black/20"
+        className="absolute inset-0 bg-black/20 dialog-backdrop"
         onClick={onClose}
       />
       <div
@@ -105,7 +105,7 @@ export function Dialog({
         className={cn(
           presentation === "drawer"
             ? "relative flex h-full w-full flex-col border-l border-[#DCD9D0] bg-[#F8F7F3] outline-none"
-            : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none",
+            : "relative flex w-full flex-col rounded-[2px] border border-border bg-surface outline-none dialog-panel",
         )}
         style={
           presentation === "dialog"
