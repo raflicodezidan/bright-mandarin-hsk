@@ -30,14 +30,14 @@ function Meta({
   value: string;
 }) {
   return (
-    <span className="inline-flex items-baseline gap-1.5">
+    <div className="flex flex-col gap-1">
       <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
         {label}
       </span>
-      <span className="text-[11px] font-medium tabular text-[#52525B]">
+      <span className="font-mono text-[13px] font-medium tabular text-[#18181B]">
         {value}
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -119,7 +119,7 @@ export default async function StudentTestsPage() {
                       {status.label}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono">
+                  <dl className="grid grid-cols-3 gap-3 rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6] px-4 py-3">
                     <Meta label="Level" value={`HSK ${test.level}`} />
                     <Meta
                       label="Soal"
@@ -129,7 +129,7 @@ export default async function StudentTestsPage() {
                       label="Durasi"
                       value={formatDuration(test.duration_minutes)}
                     />
-                  </div>
+                  </dl>
                 </div>
                 <div className="shrink-0 sm:pl-4">
                   <TestActions
