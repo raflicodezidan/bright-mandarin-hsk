@@ -1,4 +1,5 @@
 import * as React from "react";
+import Image from "next/image";
 
 export type StudentShellProps = {
   children: React.ReactNode;
@@ -12,20 +13,21 @@ export function StudentShell({ children, userName, logout }: StudentShellProps) 
       <header className="sticky top-0 z-30 h-16 border-b border-[#DCD9D0] bg-[#F8F7F3]">
         <div className="flex h-full w-full items-center justify-between gap-4 px-6 sm:px-10 lg:px-14">
           <div className="flex min-w-0 items-center gap-3">
+            <Image
+              src="/logo-bright-mandarin-horizontal.png"
+              alt="Bright Mandarin"
+              width={633}
+              height={234}
+              priority
+              className="h-9 w-auto mix-blend-multiply"
+            />
             <span
-              lang="zh-Hans"
-              className="font-cjk flex size-[30px] shrink-0 items-center justify-center rounded-[2px] bg-[#9E2A2B] text-sm font-semibold text-[#F8F7F3]"
-            >
-              明
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold leading-5 text-[#18181B]">
-                Bright Mandarin
-              </p>
-              <p className="font-mono text-[10px] font-medium uppercase leading-3 tracking-[0.12em] text-[#71717A]">
-                PORTAL MURID
-              </p>
-            </div>
+              aria-hidden="true"
+              className="h-5 w-[1px] bg-[#DCD9D0]"
+            />
+            <p className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-[#71717A]">
+              PORTAL MURID
+            </p>
           </div>
           <div className="flex shrink-0 items-center">
             {userName ? (

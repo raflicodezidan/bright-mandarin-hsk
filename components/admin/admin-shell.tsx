@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -71,16 +72,22 @@ function Navigation({
 
 function Brand() {
   return (
-    <div className="flex items-center gap-3">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-[2px] bg-[#9E2A2B] font-cjk text-sm font-semibold text-[#F8F7F3]" lang="zh-Hans">
-        明
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold leading-4 text-[#18181B]">Bright Mandarin</p>
-        <p className="font-mono text-[9px] font-medium leading-3 tracking-[0.08em] text-[#71717A]">
-          ADMIN PORTAL
-        </p>
-      </div>
+    <div className="flex items-center gap-2.5">
+      <Image
+        src="/logo-bright-mandarin-horizontal.png"
+        alt="Bright Mandarin"
+        width={633}
+        height={234}
+        priority
+        className="h-8 w-auto mix-blend-multiply"
+      />
+      <span
+        aria-hidden="true"
+        className="h-4 w-[1px] bg-[#DCD9D0]"
+      />
+      <p className="font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-[#71717A]">
+        ADMIN
+      </p>
     </div>
   );
 }
