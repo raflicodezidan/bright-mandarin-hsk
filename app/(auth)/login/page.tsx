@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { LoginForm } from "./login-form";
@@ -39,16 +40,16 @@ export default async function LoginPage() {
 
       <div className="relative w-full max-w-[400px] overflow-hidden rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6]">
         <header className="flex flex-col items-center px-7 pb-3 pt-8 text-center">
-          <span
-            lang="zh-Hans"
-            className="font-cjk flex size-8 items-center justify-center rounded-[2px] bg-[#9E2A2B] text-[15px] font-semibold leading-none text-[#F8F7F3]"
-          >
-            明
-          </span>
-          <p className="mt-3 text-[16px] font-bold leading-5 text-[#18181B]">
-            Bright Mandarin
-          </p>
-          <p className="mt-1 font-mono text-[10px] font-medium uppercase leading-3 tracking-[0.12em] text-[#71717A]">
+          <Image
+            src="/logo-bright-mandarin.png"
+            alt="Bright Mandarin"
+            width={512}
+            height={512}
+            priority
+            sizes="160px"
+            className="h-auto w-[160px] mix-blend-multiply"
+          />
+          <p className="mt-3 font-mono text-[10px] font-medium uppercase leading-3 tracking-[0.12em] text-[#71717A]">
             Portal Murid
           </p>
 
