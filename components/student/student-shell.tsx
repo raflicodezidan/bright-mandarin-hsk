@@ -10,7 +10,7 @@ export type StudentShellProps = {
 export function StudentShell({ children, userName, logout }: StudentShellProps) {
   return (
     <div className="min-h-screen bg-[#F4F3EF] text-[#18181B]">
-      <header className="sticky top-0 z-30 h-[72px] border-b border-[#DCD9D0] bg-[#F8F7F3]">
+      <header className="sticky top-0 z-30 h-[72px] border-b border-[#DCD9D0] bg-[#FAF9F5]">
         <div className="flex h-full w-full items-center justify-between gap-4 px-6 sm:px-10 lg:px-14">
           <div className="flex min-w-0 items-center">
             <Image

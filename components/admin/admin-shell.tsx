@@ -79,7 +79,7 @@ function Brand() {
         width={633}
         height={234}
         priority
-        className="h-9 w-auto mix-blend-multiply"
+        className="h-8 w-auto mix-blend-multiply"
       />
     </div>
   );
@@ -111,7 +111,7 @@ export function AdminShell({ children, userName, email, logout }: AdminShellProp
 
   const sidebarContent = (
     <>
-      <div className="flex h-16 items-center border-b border-[#DCD9D0] px-3">
+      <div className="flex h-14 items-center border-b border-[#DCD9D0] bg-[#FAF9F5] px-3.5">
         <Brand />
         <button
           type="button"
@@ -152,7 +152,7 @@ export function AdminShell({ children, userName, email, logout }: AdminShellProp
         {sidebarContent}
       </aside>
 
-      <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-[#DCD9D0] bg-[#F8F7F3] px-4 sm:px-6">
+      <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-[#DCD9D0] bg-[#FAF9F5] px-4 sm:px-6">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
