@@ -10,24 +10,17 @@ export type StudentShellProps = {
 export function StudentShell({ children, userName, logout }: StudentShellProps) {
   return (
     <div className="min-h-screen bg-[#F4F3EF] text-[#18181B]">
-      <header className="sticky top-0 z-30 h-16 border-b border-[#DCD9D0] bg-[#F8F7F3]">
+      <header className="sticky top-0 z-30 h-[72px] border-b border-[#DCD9D0] bg-[#F8F7F3]">
         <div className="flex h-full w-full items-center justify-between gap-4 px-6 sm:px-10 lg:px-14">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center">
             <Image
               src="/logo-bright-mandarin-horizontal.png"
               alt="Bright Mandarin"
               width={633}
               height={234}
               priority
-              className="h-9 w-auto mix-blend-multiply"
+              className="h-11 w-auto mix-blend-multiply sm:h-12"
             />
-            <span
-              aria-hidden="true"
-              className="h-5 w-[1px] bg-[#DCD9D0]"
-            />
-            <p className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-[#71717A]">
-              PORTAL MURID
-            </p>
           </div>
           <div className="flex shrink-0 items-center">
             {userName ? (

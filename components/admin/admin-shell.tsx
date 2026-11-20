@@ -72,22 +72,15 @@ function Navigation({
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center">
       <Image
         src="/logo-bright-mandarin-horizontal.png"
         alt="Bright Mandarin"
         width={633}
         height={234}
         priority
-        className="h-8 w-auto mix-blend-multiply"
+        className="h-9 w-auto mix-blend-multiply"
       />
-      <span
-        aria-hidden="true"
-        className="h-4 w-[1px] bg-[#DCD9D0]"
-      />
-      <p className="font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-[#71717A]">
-        ADMIN
-      </p>
     </div>
   );
 }
@@ -118,7 +111,7 @@ export function AdminShell({ children, userName, email, logout }: AdminShellProp
 
   const sidebarContent = (
     <>
-      <div className="flex h-[52px] items-center border-b border-[#DCD9D0] px-3">
+      <div className="flex h-16 items-center border-b border-[#DCD9D0] px-3">
         <Brand />
         <button
           type="button"
