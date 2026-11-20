@@ -17,7 +17,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
-    <form action={action} className="flex flex-col gap-4 p-7">
+    <form action={action} className="flex flex-col gap-4 px-7 pb-7 pt-5">
       {state.error ? (
         <div
           role="alert"

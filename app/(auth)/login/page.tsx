@@ -38,7 +38,7 @@ export default async function LoginPage() {
       <LatticeCorner className="bottom-0 left-0 -rotate-90" />
 
       <div className="relative w-full max-w-[400px] overflow-hidden rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6]">
-        <header className="flex flex-col items-center border-b border-[#DCD9D0] px-7 pb-6 pt-8 text-center">
+        <header className="flex flex-col items-center px-7 pb-3 pt-8 text-center">
           <span
             lang="zh-Hans"
             className="font-cjk flex size-8 items-center justify-center rounded-[2px] bg-[#9E2A2B] text-[15px] font-semibold leading-none text-[#F8F7F3]"
