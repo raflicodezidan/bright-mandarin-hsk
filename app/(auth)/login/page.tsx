@@ -21,7 +21,7 @@ export default async function LoginPage() {
         priority
         className="pointer-events-none object-cover object-center"
       />
-      <div className="pointer-events-none absolute inset-0 bg-[#FAF9F5]/30 backdrop-blur-[1px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[#FAF9F5]/10" />
 
       <div className="relative w-full max-w-[400px] overflow-hidden rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6]">
         <header className="flex flex-col items-center px-7 pb-3 pt-8 text-center">
