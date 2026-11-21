@@ -15,7 +15,7 @@ export default async function LoginPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10">
       <Image
-        src="/login-bg.jpg"
+        src="/login-bg.webp"
         alt="Latar belakang Bright Mandarin"
         fill
         priority
