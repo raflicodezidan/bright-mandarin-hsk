@@ -5,25 +5,6 @@ import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Masuk" };
 
-function LatticeCorner({ className }: { className: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 120 120"
-      fill="none"
-      stroke="#E2DFD7"
-      strokeWidth="1"
-      className={`pointer-events-none absolute hidden size-[120px] sm:block ${className}`}
-    >
-      <path d="M0 28h28V0" />
-      <path d="M0 56h56V0" />
-      <path d="M28 28h28v28H28z" />
-      <path d="M28 42h28M42 28v28" />
-      <path d="M0 84h12M84 0v12" />
-    </svg>
-  );
-}
-
 export default async function LoginPage() {
   const session = await getSessionProfile();
 
@@ -32,11 +13,15 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#F4F3EF] px-4 py-10">
-      <LatticeCorner className="left-0 top-0" />
-      <LatticeCorner className="right-0 top-0 rotate-90" />
-      <LatticeCorner className="bottom-0 right-0 rotate-180" />
-      <LatticeCorner className="bottom-0 left-0 -rotate-90" />
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10">
+      <Image
+        src="/login-bg.jpg"
+        alt="Latar belakang Bright Mandarin"
+        fill
+        priority
+        className="pointer-events-none object-cover object-center"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[#FAF9F5]/30 backdrop-blur-[1px]" />
 
       <div className="relative w-full max-w-[400px] overflow-hidden rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6]">
         <header className="flex flex-col items-center px-7 pb-3 pt-8 text-center">
