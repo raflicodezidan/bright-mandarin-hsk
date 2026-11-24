@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -24,23 +24,42 @@ function csvCell(value: string | number | null): string {
 
 export async function GET(request: NextRequest) {
   const session = await getSessionProfile();
-  if (!session || session.profile.role !== "admin") {
+  if (!session || !isStaffRole(session.profile.role)) {
     return NextResponse.json({ error: "Akses ditolak." }, { status: 403 });
   }
 
   const filters = parseResultFilters(request.nextUrl.searchParams);
   const supabase = await createClient();
 
-  const testsResult = await supabase
-    .from("tests")
-    .select("id, level")
-    .order("created_at", { ascending: false });
+  const [testsResult, teachersResult, assignmentsResult] = await Promise.all([
+    supabase
+      .from("tests")
+      .select("id, level")
+      .order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id, full_name").eq("role", "teacher"),
+    supabase
+      .from("teacher_students")
+      .select("student_id, teacher_id")
+      .is("ended_at", null),
+  ]);
   const tests = testsResult.data ?? [];
+  const teacherNames = new Map(
+    (teachersResult.data ?? []).map((teacher) => [
+      teacher.id,
+      teacher.full_name,
+    ]),
+  );
+  const teacherByStudent = new Map(
+    (assignmentsResult.data ?? []).map((assignment) => [
+      assignment.student_id,
+      assignment.teacher_id,
+    ]),
+  );
 
   let query = supabase
     .from("attempts")
     .select(
-      "id, status, correct_count, total_count, listening_correct, listening_total, reading_correct, reading_total, started_at, submitted_at, profiles(full_name, username), tests(title, level)",
+      "id, student_id, status, correct_count, total_count, listening_correct, listening_total, reading_correct, reading_total, started_at, submitted_at, profiles(full_name, username), tests(title, level)",
     );
 
   if (filters.studentId) query = query.eq("student_id", filters.studentId);
@@ -54,7 +73,7 @@ export async function GET(request: NextRequest) {
       );
     }
     if (studentSearch.ids.length === 0) {
-      return csvResponse([], filters);
+      return csvResponse([], filters, teacherByStudent, teacherNames);
     }
     query = query.in("student_id", studentSearch.ids);
   }
@@ -63,7 +82,7 @@ export async function GET(request: NextRequest) {
       .filter((test) => test.level === filters.level)
       .map((test) => test.id);
     if (ids.length === 0) {
-      return csvResponse([], filters);
+      return csvResponse([], filters, teacherByStudent, teacherNames);
     }
     query = query.in("test_id", ids);
   }
@@ -82,7 +101,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return csvResponse(data ?? [], filters);
+  return csvResponse(data ?? [], filters, teacherByStudent, teacherNames);
 }
 
 function csvResponse(
@@ -96,14 +115,18 @@ function csvResponse(
     reading_total: number | null;
     started_at: string;
     submitted_at: string | null;
+    student_id: string;
     profiles: { full_name: string; username: string } | null;
     tests: { title: string; level: number } | null;
   }[],
   filters: { level: number | null },
+  teacherByStudent: Map<string, string>,
+  teacherNames: Map<string, string>,
 ): NextResponse {
   const header = [
     "Nama murid",
     "Username",
+    "Guru",
     "Tes",
     "Level",
     "Mulai (WIB)",
@@ -124,10 +147,12 @@ function csvResponse(
   for (const row of rows) {
     const percent = percentage(row.correct_count, row.total_count);
     const duration = attemptDurationMinutes(row.started_at, row.submitted_at);
+    const teacherId = teacherByStudent.get(row.student_id);
     lines.push(
       [
         row.profiles?.full_name ?? "",
         row.profiles?.username ?? "",
+        teacherId ? teacherNames.get(teacherId) ?? "" : "",
         row.tests?.title ?? "",
         row.tests?.level ?? (filters.level ?? ""),
         formatDateTime(row.started_at),

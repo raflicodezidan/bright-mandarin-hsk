@@ -7,11 +7,13 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { TestForm } from "@/components/admin/tests/test-form";
 import { TestStatusActions } from "@/components/admin/tests/test-status-actions";
+import { TestAssignmentsCard } from "@/components/admin/tests/test-assignments-card";
 import {
   QuestionList,
   type QuestionListItem,
 } from "@/components/admin/tests/question-list";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerRole, requireStaff } from "@/lib/auth";
 import { TestStatusBadge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/format";
 
@@ -22,6 +24,8 @@ export default async function TestDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const profile = await requireStaff();
+  const isOwner = isOwnerRole(profile.role);
   const { id } = await params;
   const supabase = await createClient();
 
@@ -43,9 +47,38 @@ export default async function TestDetailPage({
   const test = testResult.data;
   if (!test) notFound();
 
+  const canManage = isOwner || test.created_by === profile.id;
   const questions = questionsResult.data ?? [];
   const attemptCount = attemptsResult.count ?? 0;
   const hasAttempts = attemptCount > 0;
+
+  let assignmentTeachers: {
+    id: string;
+    fullName: string;
+    isActive: boolean;
+  }[] = [];
+  let assignedTeacherIds: string[] = [];
+  if (isOwner) {
+    const [teachersResult, assignmentsResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, is_active")
+        .eq("role", "teacher")
+        .order("full_name"),
+      supabase
+        .from("test_assignments")
+        .select("teacher_id")
+        .eq("test_id", test.id),
+    ]);
+    assignmentTeachers = (teachersResult.data ?? []).map((teacher) => ({
+      id: teacher.id,
+      fullName: teacher.full_name,
+      isActive: teacher.is_active,
+    }));
+    assignedTeacherIds = (assignmentsResult.data ?? []).map(
+      (assignment) => assignment.teacher_id,
+    );
+  }
 
   function toItems(section: "listening" | "reading"): QuestionListItem[] {
     return questions
@@ -91,9 +124,18 @@ export default async function TestDetailPage({
           <span className="text-xs text-text-muted">
             {questions.length} soal · {attemptCount} pengerjaan
           </span>
+          {!canManage ? (
+            <Badge tone="primary">Ditugaskan kepada Anda</Badge>
+          ) : null}
         </div>
 
-        {hasAttempts ? (
+        {!canManage ? (
+          <Alert tone="warning" title="Akses lihat saja">
+            Tes ini ditugaskan kepada Anda. Anda dapat melihat soal dan hasil
+            murid, tetapi perubahan tes dan soal hanya dapat dilakukan pemilik
+            tes.
+          </Alert>
+        ) : hasAttempts ? (
           <Alert tone="warning" title="Pengeditan setelah pengerjaan">
             Teks soal, teks opsi, dan kunci jawaban dapat diubah. Nilai pengerjaan
             yang sudah selesai dihitung ulang dengan kunci terbaru. Untuk tes
@@ -108,25 +150,63 @@ export default async function TestDetailPage({
           </Alert>
         ) : null}
 
-        <TestForm
-          mode="edit"
-          testId={test.id}
-          initial={{
-            title: test.title,
-            level: test.level,
-            description: test.description,
-            durationMinutes: test.duration_minutes,
-          }}
-          lockedDuration={hasAttempts}
-        />
-
-        <Card title="Status tes">
-          <TestStatusActions
+        {canManage ? (
+          <TestForm
+            mode="edit"
             testId={test.id}
-            status={test.status}
-            hasAttempts={hasAttempts}
+            initial={{
+              title: test.title,
+              level: test.level,
+              description: test.description,
+              durationMinutes: test.duration_minutes,
+            }}
+            lockedDuration={hasAttempts}
           />
-        </Card>
+        ) : (
+          <Card title="Informasi tes">
+            <dl className="grid gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <dt className="text-xs text-text-muted">Level</dt>
+                <dd className="text-sm">HSK {test.level}</dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-xs text-text-muted">Durasi</dt>
+                <dd className="text-sm">
+                  {formatDuration(test.duration_minutes)}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-xs text-text-muted">Deskripsi</dt>
+                <dd className="text-sm">
+                  {test.description || "Tidak ada deskripsi."}
+                </dd>
+              </div>
+            </dl>
+          </Card>
+        )}
+
+        {canManage ? (
+          <Card title="Status tes">
+            <TestStatusActions
+              testId={test.id}
+              status={test.status}
+              hasAttempts={hasAttempts}
+            />
+          </Card>
+        ) : null}
+
+        {isOwner ? (
+          <Card
+            title="Penugasan guru"
+            description="Atur guru yang dapat mengelola dan memberikan tes ini."
+          >
+            <TestAssignmentsCard
+              testId={test.id}
+              teachers={assignmentTeachers}
+              assignedIds={assignedTeacherIds}
+            />
+          </Card>
+        ) : null}
 
         <section className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -134,20 +214,24 @@ export default async function TestDetailPage({
               <h2 className="text-lg font-semibold text-text">Listening</h2>
               <Badge tone="neutral">{listening.length} soal</Badge>
             </div>
-            <LinkButton
-              href={`/admin/tests/${test.id}/questions/new?section=listening`}
-              size="sm"
-              variant="secondary"
-              aria-disabled={hasAttempts}
-              className={hasAttempts ? "pointer-events-none opacity-60" : undefined}
-            >
-              Tambah soal
-            </LinkButton>
+            {canManage ? (
+              <LinkButton
+                href={`/admin/tests/${test.id}/questions/new?section=listening`}
+                size="sm"
+                variant="secondary"
+                aria-disabled={hasAttempts}
+                className={
+                  hasAttempts ? "pointer-events-none opacity-60" : undefined
+                }
+              >
+                Tambah soal
+              </LinkButton>
+            ) : null}
           </div>
           <QuestionList
             testId={test.id}
             items={listening}
-            locked={false}
+            locked={!canManage}
             textOnly={hasAttempts}
           />
         </section>
@@ -158,17 +242,26 @@ export default async function TestDetailPage({
               <h2 className="text-lg font-semibold text-text">Reading</h2>
               <Badge tone="neutral">{reading.length} soal</Badge>
             </div>
-            <LinkButton
-              href={`/admin/tests/${test.id}/questions/new?section=reading`}
-              size="sm"
-              variant="secondary"
-              aria-disabled={hasAttempts}
-              className={hasAttempts ? "pointer-events-none opacity-60" : undefined}
-            >
-              Tambah soal
-            </LinkButton>
+            {canManage ? (
+              <LinkButton
+                href={`/admin/tests/${test.id}/questions/new?section=reading`}
+                size="sm"
+                variant="secondary"
+                aria-disabled={hasAttempts}
+                className={
+                  hasAttempts ? "pointer-events-none opacity-60" : undefined
+                }
+              >
+                Tambah soal
+              </LinkButton>
+            ) : null}
           </div>
-          <QuestionList testId={test.id} items={reading} locked={false} textOnly={hasAttempts} />
+          <QuestionList
+            testId={test.id}
+            items={reading}
+            locked={!canManage}
+            textOnly={hasAttempts}
+          />
         </section>
 
         <p className="flex items-center gap-2 text-xs text-text-muted">

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   ClipboardList,
   FileText,
+  GraduationCap,
   HardDrive,
   LayoutDashboard,
   Menu,
@@ -14,17 +15,64 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ProfileRole } from "@/lib/auth";
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/results", label: "Hasil", icon: ClipboardList, exact: false },
-  { href: "/admin/students", label: "Murid", icon: Users, exact: false },
-  { href: "/admin/tests", label: "Tes", icon: FileText, exact: false },
-  { href: "/admin/storage", label: "Penyimpanan", icon: HardDrive, exact: false },
-] as const;
+type StaffRole = Exclude<ProfileRole, "student">;
+
+const NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+  roles: StaffRole[];
+}[] = [
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    exact: true,
+    roles: ["owner", "admin", "teacher"],
+  },
+  {
+    href: "/admin/results",
+    label: "Hasil",
+    icon: ClipboardList,
+    exact: false,
+    roles: ["owner", "admin", "teacher"],
+  },
+  {
+    href: "/admin/students",
+    label: "Murid",
+    icon: Users,
+    exact: false,
+    roles: ["owner", "admin", "teacher"],
+  },
+  {
+    href: "/admin/tests",
+    label: "Tes",
+    icon: FileText,
+    exact: false,
+    roles: ["owner", "admin", "teacher"],
+  },
+  {
+    href: "/admin/teachers",
+    label: "Guru",
+    icon: GraduationCap,
+    exact: false,
+    roles: ["owner", "admin"],
+  },
+  {
+    href: "/admin/storage",
+    label: "Penyimpanan",
+    icon: HardDrive,
+    exact: false,
+    roles: ["owner", "admin"],
+  },
+];
 
 export type AdminShellProps = {
   children: React.ReactNode;
+  role: StaffRole;
   userName?: string;
   email?: string;
   logout?: React.ReactNode;
@@ -34,11 +82,21 @@ function isActive(pathname: string, href: string, exact: boolean): boolean {
   return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function initialsFor(name: string | undefined): string {
+  if (!name) return "BM";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "BM";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
 function Navigation({
   pathname,
+  role,
   onNavigate,
 }: {
   pathname: string;
+  role: StaffRole;
   onNavigate?: () => void;
 }) {
   return (
@@ -46,26 +104,28 @@ function Navigation({
       <p className="mb-2 px-3 pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#71717A]">
         Menu utama
       </p>
-      {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
-        const active = isActive(pathname, href, exact);
-        return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "relative flex h-9 items-center gap-3 rounded-[2px] px-3 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              active
-                ? "bg-[#E2DFD5] font-semibold text-[#18181B] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-[#9E2A2B]"
-                : "text-[#52525B] hover:bg-[#E2DFD5] hover:text-[#18181B]",
-            )}
-          >
-            <Icon size={15} strokeWidth={1.6} aria-hidden="true" />
-            {label}
-          </Link>
-        );
-      })}
+      {NAV_ITEMS.filter((item) => item.roles.includes(role)).map(
+        ({ href, label, icon: Icon, exact }) => {
+          const active = isActive(pathname, href, exact);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "relative flex h-9 items-center gap-3 rounded-[2px] px-3 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                active
+                  ? "bg-[#E2DFD5] font-semibold text-[#18181B] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-[#9E2A2B]"
+                  : "text-[#52525B] hover:bg-[#E2DFD5] hover:text-[#18181B]",
+              )}
+            >
+              <Icon size={15} strokeWidth={1.6} aria-hidden="true" />
+              {label}
+            </Link>
+          );
+        },
+      )}
     </nav>
   );
 }
@@ -85,7 +145,13 @@ function Brand() {
   );
 }
 
-export function AdminShell({ children, userName, email, logout }: AdminShellProps) {
+export function AdminShell({
+  children,
+  role,
+  userName,
+  email,
+  logout,
+}: AdminShellProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
@@ -104,10 +170,12 @@ export function AdminShell({ children, userName, email, logout }: AdminShellProp
     };
   }, [drawerOpen, closeDrawer]);
 
-  const currentPage = NAV_ITEMS.find(({ href, exact }) =>
+  const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const currentPage = visibleItems.find(({ href, exact }) =>
     isActive(pathname, href, exact),
   );
   const pageTitle = currentPage?.label ?? "Tes";
+  const roleLabel = role === "teacher" ? "Guru" : "Owner";
 
   const sidebarContent = (
     <>
@@ -123,22 +191,20 @@ export function AdminShell({ children, userName, email, logout }: AdminShellProp
         </button>
       </div>
       <div className="flex-1 px-2">
-        <Navigation pathname={pathname} onNavigate={closeDrawer} />
+        <Navigation pathname={pathname} role={role} onNavigate={closeDrawer} />
       </div>
       <div className="border-t border-[#DCD9D0] p-3">
         <div className="mb-3 flex min-w-0 items-center gap-2">
           <span className="flex size-6 shrink-0 items-center justify-center border border-[#DCD9D0] bg-[#F8F7F3] font-mono text-[10px] font-semibold text-[#18181B]">
-            AD
+            {initialsFor(userName)}
           </span>
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold leading-4 text-[#18181B]">
-              {userName ?? "Administrator"}
+              {userName ?? roleLabel}
             </p>
-            {email ? (
-              <p className="truncate font-mono text-[10px] leading-3 text-[#71717A]">
-                {email}
-              </p>
-            ) : null}
+            <p className="truncate font-mono text-[10px] leading-3 text-[#71717A]">
+              {email ? `${email} · ${roleLabel}` : roleLabel}
+            </p>
           </div>
         </div>
         <div className="[&_button]:w-full">{logout}</div>

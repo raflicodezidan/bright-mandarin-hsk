@@ -89,7 +89,7 @@ export default async function StudentTestsPage() {
         <div className="rounded-[3px] border border-[#DCD9D0] bg-[#FAF9F6] px-8 py-12">
           <p className="text-[16px] font-semibold text-[#18181B]">Belum ada tes</p>
           <p className="mt-1 text-[13px] text-[#52525B]">
-            Tes yang dibuka admin akan muncul di halaman ini.
+            Tes yang dibuka guru akan muncul di halaman ini.
           </p>
         </div>
       ) : (

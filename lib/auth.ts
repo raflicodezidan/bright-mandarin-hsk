@@ -5,6 +5,19 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 
 export type Profile = Tables<"profiles">;
+export type ProfileRole = Profile["role"];
+
+export function isOwnerRole(role: ProfileRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export function isStaffRole(role: ProfileRole): boolean {
+  return isOwnerRole(role) || role === "teacher";
+}
+
+export function staffHome(role: ProfileRole): string {
+  return isStaffRole(role) ? "/admin" : "/tests";
+}
 
 export const getSessionProfile = cache(async () => {
   const supabase = await createClient();
@@ -25,11 +38,27 @@ export const getSessionProfile = cache(async () => {
   return { user, profile };
 });
 
-export async function requireAdmin(): Promise<Profile> {
+export async function requireOwner(): Promise<Profile> {
   const session = await getSessionProfile();
   if (!session) redirect("/login");
-  if (session.profile.role !== "admin") redirect("/tests");
+  if (!isOwnerRole(session.profile.role)) redirect("/admin");
   return session.profile;
+}
+
+/**
+ * Owner dan guru sama-sama memakai area /admin. Isolasi data dilakukan oleh
+ * RLS; halaman yang hanya untuk owner memakai requireOwner().
+ */
+export async function requireStaff(): Promise<Profile> {
+  const session = await getSessionProfile();
+  if (!session) redirect("/login");
+  if (!isStaffRole(session.profile.role)) redirect("/tests");
+  return session.profile;
+}
+
+/** Nama lama dipertahankan untuk halaman yang memang hanya untuk owner. */
+export async function requireAdmin(): Promise<Profile> {
+  return requireOwner();
 }
 
 export async function requireStudent(): Promise<Profile> {

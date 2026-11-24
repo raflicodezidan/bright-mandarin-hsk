@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, staffHome } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Masuk" };
@@ -9,7 +9,7 @@ export default async function LoginPage() {
   const session = await getSessionProfile();
 
   if (session) {
-    redirect(session.profile.role === "admin" ? "/admin" : "/tests");
+    redirect(staffHome(session.profile.role));
   }
 
   return (
@@ -35,14 +35,14 @@ export default async function LoginPage() {
             className="h-auto w-[160px] mix-blend-multiply"
           />
           <p className="mt-3 font-mono text-[10px] font-medium uppercase leading-3 tracking-[0.12em] text-[#71717A]">
-            Portal Murid
+            Portal Bright Mandarin
           </p>
 
           <h1 className="mt-6 text-[20px] font-bold leading-7 tracking-[-0.02em] text-[#18181B]">
-            Masuk ke Akun Murid
+            Masuk ke Akun
           </h1>
           <p className="mt-1 text-[13px] leading-5 text-[#52525B]">
-            Masukkan username dan password untuk mulai mengerjakan tes.
+            Masukkan username dan password untuk melanjutkan.
           </p>
         </header>
 

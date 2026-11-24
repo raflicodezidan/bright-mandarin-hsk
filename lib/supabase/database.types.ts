@@ -41,6 +41,90 @@ export type Database = {
         };
         Relationships: [];
       };
+      teacher_students: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          student_id: string;
+          assigned_by: string | null;
+          assigned_at: string;
+          ended_at: string | null;
+          ended_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          student_id: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+          ended_at?: string | null;
+          ended_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          teacher_id?: string;
+          student_id?: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+          ended_at?: string | null;
+          ended_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "teacher_students_teacher_id_fkey";
+            columns: ["teacher_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "teacher_students_student_id_fkey";
+            columns: ["student_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      test_assignments: {
+        Row: {
+          id: string;
+          test_id: string;
+          teacher_id: string;
+          assigned_by: string | null;
+          assigned_at: string;
+        };
+        Insert: {
+          id?: string;
+          test_id: string;
+          teacher_id: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Update: {
+          id?: string;
+          test_id?: string;
+          teacher_id?: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "test_assignments_test_id_fkey";
+            columns: ["test_id"];
+            isOneToOne: false;
+            referencedRelation: "tests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "test_assignments_teacher_id_fkey";
+            columns: ["teacher_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tests: {
         Row: {
           id: string;
@@ -289,16 +373,91 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      is_owner: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      is_teacher: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      is_staff: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      is_teacher_of_student: {
+        Args: { p_student_id: string };
+        Returns: boolean;
+      };
+      teacher_owns_test: {
+        Args: { p_test_id: string };
+        Returns: boolean;
+      };
+      teacher_can_access_test: {
+        Args: { p_test_id: string };
+        Returns: boolean;
+      };
+      teacher_can_review_test: {
+        Args: { p_test_id: string };
+        Returns: boolean;
+      };
+      teacher_can_access_question: {
+        Args: { p_question_id: string };
+        Returns: boolean;
+      };
+      teacher_owns_question: {
+        Args: { p_question_id: string };
+        Returns: boolean;
+      };
+      teacher_can_access_attempt: {
+        Args: { p_attempt_id: string };
+        Returns: boolean;
+      };
+      student_can_access_test: {
+        Args: { p_test_id: string };
+        Returns: boolean;
+      };
+      can_manage_attempt: {
+        Args: { p_attempt_id: string };
+        Returns: boolean;
+      };
+      has_attempt_for_test: {
+        Args: { p_test_id: string };
+        Returns: boolean;
+      };
+      assign_student_to_teacher: {
+        Args: { p_teacher_id: string; p_student_id: string };
+        Returns: undefined;
+      };
+      unassign_student: {
+        Args: { p_student_id: string };
+        Returns: undefined;
+      };
+      set_test_assignments: {
+        Args: { p_test_id: string; p_teacher_ids: string[] };
+        Returns: undefined;
+      };
+      owner_teacher_kpis: {
+        Args: Record<string, never>;
+        Returns: {
+          teacher_id: string;
+          full_name: string;
+          username: string;
+          is_active: boolean;
+          student_count: number;
+          attempt_count: number;
+          completed_count: number;
+          avg_percentage: number;
+          weak_student_count: number;
+          last_activity_at: string | null;
+        }[];
+      };
       has_active_attempt: {
         Args: { p_test_id: string };
         Returns: boolean;
       };
       has_active_attempt_for_question: {
         Args: { p_question_id: string };
-        Returns: boolean;
-      };
-      has_attempt_for_test: {
-        Args: { p_test_id: string };
         Returns: boolean;
       };
       get_test_summary: {
@@ -382,7 +541,7 @@ export type Database = {
       };
     };
     Enums: {
-      user_role: "admin" | "student";
+      user_role: "owner" | "admin" | "teacher" | "student";
       test_status: "draft" | "open" | "closed" | "archived";
       question_section: "listening" | "reading";
       attempt_status: "in_progress" | "submitted" | "expired";

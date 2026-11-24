@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, isOwnerRole, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -16,15 +16,24 @@ import {
   testSchema,
   testStatusSchema,
 } from "@/lib/validation/tests";
+import { setTestAssignmentsSchema } from "@/lib/validation/teachers";
 import type { Tables } from "@/lib/supabase/database.types";
 
 export type TestActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function guardAdmin(): Promise<{ ok: false; error: string } | null> {
+async function guardStaff(): Promise<{ ok: false; error: string } | null> {
   const session = await getSessionProfile();
-  if (!session || session.profile.role !== "admin" || !session.profile.is_active) {
+  if (!session || !isStaffRole(session.profile.role) || !session.profile.is_active) {
+    return { ok: false, error: "Akses ditolak." };
+  }
+  return null;
+}
+
+async function guardOwner(): Promise<{ ok: false; error: string } | null> {
+  const session = await getSessionProfile();
+  if (!session || !isOwnerRole(session.profile.role) || !session.profile.is_active) {
     return { ok: false, error: "Akses ditolak." };
   }
   return null;
@@ -39,7 +48,7 @@ function errorMessage(error: { message: string } | null, fallback: string): stri
 export async function createTestAction(
   input: unknown,
 ): Promise<TestActionResult<{ id: string }>> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   const parsed = testSchema.safeParse(input);
@@ -80,7 +89,7 @@ export async function updateTestAction(input: {
   description: string;
   durationMinutes: number;
 }): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   if (typeof input.testId !== "string") {
@@ -95,7 +104,22 @@ export async function updateTestAction(input: {
     };
   }
 
+  const session = await getSessionProfile();
   const supabase = await createClient();
+  const { data: test } = await supabase
+    .from("tests")
+    .select("created_by")
+    .eq("id", input.testId)
+    .maybeSingle();
+
+  if (!test) return { ok: false, error: "Tes tidak ditemukan." };
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)
+  ) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah tes ini." };
+  }
+
   const { error } = await supabase
     .from("tests")
     .update({
@@ -118,13 +142,28 @@ export async function updateTestAction(input: {
 export async function setTestStatusAction(
   input: unknown,
 ): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   const parsed = testStatusSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Data tidak valid." };
 
+  const session = await getSessionProfile();
   const supabase = await createClient();
+  const { data: test } = await supabase
+    .from("tests")
+    .select("created_by")
+    .eq("id", parsed.data.testId)
+    .maybeSingle();
+
+  if (!test) return { ok: false, error: "Tes tidak ditemukan." };
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)
+  ) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah status." };
+  }
+
   const { error } = await supabase
     .from("tests")
     .update({ status: parsed.data.status })
@@ -142,7 +181,7 @@ export async function setTestStatusAction(
 export async function saveQuestionAction(
   formData: FormData,
 ): Promise<TestActionResult<{ questionId: string }>> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   const testId = String(formData.get("testId") ?? "");
@@ -159,6 +198,26 @@ export async function saveQuestionAction(
 
   if (!/^[0-9a-f-]{36}$/.test(testId)) {
     return { ok: false, error: "Tes tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: accessibleTest } = await supabase
+    .from("tests")
+    .select("created_by")
+    .eq("id", testId)
+    .maybeSingle();
+
+  if (!accessibleTest) {
+    return { ok: false, error: "Tes tidak ditemukan." };
+  }
+
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) &&
+      accessibleTest.created_by !== session.profile.id)
+  ) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah soal." };
   }
 
   let options: unknown;
@@ -213,7 +272,6 @@ export async function saveQuestionAction(
     return { ok: false, error: "Soal Listening wajib memiliki audio." };
   }
 
-  const supabase = await createClient();
   const { data, error } = await supabase.rpc("save_question", {
     p_test_id: testId,
     p_question_id: questionId,
@@ -245,7 +303,7 @@ export async function saveQuestionAction(
 export async function updateQuestionTextAction(
   formData: FormData,
 ): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   let options: unknown;
@@ -293,7 +351,7 @@ export async function moveQuestionAction(
   questionId: string,
   direction: -1 | 1,
 ): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   const supabase = await createClient();
@@ -321,7 +379,7 @@ export async function moveQuestionAction(
 export async function deleteQuestionAction(
   questionId: string,
 ): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   const supabase = await createClient();
@@ -354,21 +412,28 @@ export async function deleteQuestionAction(
 export async function deleteTestAction(
   testId: string,
 ): Promise<TestActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
 
   if (!/^[0-9a-f-]{36}$/.test(testId)) {
     return { ok: false, error: "Tes tidak valid." };
   }
 
+  const session = await getSessionProfile();
   const supabase = await createClient();
   const { data: test } = await supabase
     .from("tests")
-    .select("id, title")
+    .select("id, title, created_by")
     .eq("id", testId)
     .maybeSingle();
 
   if (!test) return { ok: false, error: "Tes tidak ditemukan." };
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)
+  ) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat menghapus tes ini." };
+  }
 
   const { count: attemptCount } = await supabase
     .from("attempts")
@@ -391,10 +456,19 @@ export async function deleteTestAction(
     .flatMap((question) => [question.image_path, question.audio_path])
     .filter((path): path is string => Boolean(path));
 
-  const { error } = await supabase.from("tests").delete().eq("id", testId);
+  const { data: deleted, error } = await supabase
+    .from("tests")
+    .delete()
+    .eq("id", testId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return { ok: false, error: errorMessage(error, "Gagal menghapus tes.") };
+  }
+
+  if (!deleted) {
+    return { ok: false, error: "Gagal menghapus tes. Coba lagi." };
   }
 
   await removeMedia(mediaPaths);
@@ -407,8 +481,35 @@ export async function deleteTestAction(
 export async function duplicateTestAction(
   testId: string,
 ): Promise<TestActionResult<{ id: string }>> {
-  const denied = await guardAdmin();
+  const denied = await guardStaff();
   if (denied) return denied;
+
+  if (!/^[0-9a-f-]{36}$/.test(testId)) {
+    return { ok: false, error: "Tes tidak valid." };
+  }
+
+  const accessClient = await createClient();
+  const { data: accessibleTest } = await accessClient
+    .from("tests")
+    .select("created_by")
+    .eq("id", testId)
+    .maybeSingle();
+
+  if (!accessibleTest) {
+    return { ok: false, error: "Tes tidak ditemukan." };
+  }
+
+  const session = await getSessionProfile();
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) &&
+      accessibleTest.created_by !== session.profile.id)
+  ) {
+    return {
+      ok: false,
+      error: "Hanya pemilik tes yang dapat menduplikat tes ini.",
+    };
+  }
 
   const admin = createAdminClient();
   const { data: questions, error } = await admin
@@ -453,6 +554,35 @@ export async function duplicateTestAction(
 
   revalidatePath("/admin/tests");
   return { ok: true, data: { id: data } };
+}
+
+export async function setTestAssignmentsAction(
+  input: unknown,
+): Promise<TestActionResult> {
+  const denied = await guardOwner();
+  if (denied) return denied;
+
+  const parsed = setTestAssignmentsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Data penugasan tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_test_assignments", {
+    p_test_id: parsed.data.testId,
+    p_teacher_ids: parsed.data.teacherIds,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Gagal menyimpan penugasan tes."),
+    };
+  }
+
+  revalidatePath("/admin/tests");
+  revalidatePath(`/admin/tests/${parsed.data.testId}`);
+  revalidatePath("/admin/teachers");
+  revalidatePath("/admin");
+  return { ok: true, data: undefined };
 }
 
 export type TestRowData = Tables<"tests">;

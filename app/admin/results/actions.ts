@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { databaseErrorMessage } from "@/lib/errors";
 
@@ -16,7 +16,7 @@ export async function resetAttemptAction(
   attemptId: string,
 ): Promise<ResetResult> {
   const session = await getSessionProfile();
-  if (!session || session.profile.role !== "admin") {
+  if (!session || !isStaffRole(session.profile.role)) {
     return { ok: false, error: "Akses ditolak." };
   }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, isOwnerRole } from "@/lib/auth";
 import {
   createStudentSchema,
   resetStudentPasswordSchema,
@@ -15,9 +15,13 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function guardAdmin(): Promise<{ ok: false; error: string } | null> {
+async function guardOwner(): Promise<{ ok: false; error: string } | null> {
   const session = await getSessionProfile();
-  if (!session || session.profile.role !== "admin" || !session.profile.is_active) {
+  if (
+    !session ||
+    !isOwnerRole(session.profile.role) ||
+    !session.profile.is_active
+  ) {
     return { ok: false, error: "Akses ditolak." };
   }
   return null;
@@ -34,7 +38,7 @@ export async function createStudentAction(input: {
   username: string;
   password: string;
 }): Promise<ActionResult<{ username: string; password: string }>> {
-  const denied = await guardAdmin();
+  const denied = await guardOwner();
   if (denied) return denied;
 
   const parsed = createStudentSchema.safeParse(input);
@@ -96,7 +100,7 @@ export async function updateStudentNameAction(input: {
   studentId: string;
   fullName: string;
 }): Promise<ActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardOwner();
   if (denied) return denied;
 
   const parsed = updateStudentSchema.safeParse(input);
@@ -121,7 +125,7 @@ export async function resetStudentPasswordAction(input: {
   studentId: string;
   password: string;
 }): Promise<ActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardOwner();
   if (denied) return denied;
 
   const parsed = resetStudentPasswordSchema.safeParse(input);
@@ -155,7 +159,7 @@ export async function toggleStudentActiveAction(input: {
   studentId: string;
   isActive: boolean;
 }): Promise<ActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardOwner();
   if (denied) return denied;
 
   const parsed = toggleStudentSchema.safeParse(input);
@@ -177,7 +181,7 @@ export async function toggleStudentActiveAction(input: {
 export async function deleteStudentAction(input: {
   studentId: string;
 }): Promise<ActionResult> {
-  const denied = await guardAdmin();
+  const denied = await guardOwner();
   if (denied) return denied;
 
   const parsed = studentIdSchema.safeParse(input);

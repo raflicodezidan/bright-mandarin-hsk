@@ -19,7 +19,13 @@ export type TestRow = {
   hasAttempts: boolean;
 };
 
-export function TestRowActions({ test }: { test: TestRow }) {
+export function TestRowActions({
+  test,
+  canManage,
+}: {
+  test: TestRow;
+  canManage: boolean;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -99,7 +105,15 @@ export function TestRowActions({ test }: { test: TestRow }) {
 
   return (
     <>
-      <div ref={menuRef} className="relative inline-block text-left">
+      {!canManage ? (
+        <Link
+          href={`/admin/tests/${test.id}`}
+          className="text-xs text-text-muted underline-offset-2 hover:text-primary hover:underline"
+        >
+          Lihat
+        </Link>
+      ) : (
+        <div ref={menuRef} className="relative inline-block text-left">
         <button
           ref={buttonRef}
           type="button"
@@ -165,7 +179,8 @@ export function TestRowActions({ test }: { test: TestRow }) {
               document.body,
             )
           : null}
-      </div>
+        </div>
+      )}
 
       <Dialog
         open={deleteOpen}

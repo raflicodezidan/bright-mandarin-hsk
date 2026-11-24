@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { LinkButton } from "@/components/ui/link-button";
@@ -7,6 +7,7 @@ import {
   type QuestionFormInitial,
 } from "@/components/admin/tests/question-form";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerRole, requireStaff } from "@/lib/auth";
 import { signMedia } from "@/lib/storage";
 import type { Tables } from "@/lib/supabase/database.types";
 
@@ -21,15 +22,21 @@ export default async function QuestionPage({
 }) {
   const { id, qid } = await params;
   const query = await searchParams;
+  const profile = await requireStaff();
+  const isOwner = isOwnerRole(profile.role);
   const supabase = await createClient();
 
   const test = await supabase
     .from("tests")
-    .select("id, title")
+    .select("id, title, created_by")
     .eq("id", id)
     .maybeSingle();
 
   if (!test.data) notFound();
+
+  if (!isOwner && test.data.created_by !== profile.id) {
+    redirect(`/admin/tests/${id}`);
+  }
 
   const attempts = await supabase
     .from("attempts")

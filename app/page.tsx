@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, staffHome } from "@/lib/auth";
 
 export default async function HomePage() {
   const session = await getSessionProfile();
@@ -8,5 +8,5 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  redirect(session.profile.role === "admin" ? "/admin" : "/tests");
+  redirect(staffHome(session.profile.role));
 }

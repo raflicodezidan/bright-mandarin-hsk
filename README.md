@@ -1,8 +1,9 @@
 # Sistem Tes Online HSK — Bright Mandarin
 
-Aplikasi tes HSK (Listening & Reading) untuk murid Bright Mandarin. Admin membuat
-tes dan akun murid; murid login, mengerjakan tes sekali dengan batas waktu, lalu
-submit. Skor dihitung di server dan hanya terlihat admin.
+Aplikasi tes HSK (Listening & Reading) untuk murid Bright Mandarin. Owner mengelola
+guru, murid, tes, dan penugasan; guru mengelola tes miliknya dan murid yang diampu.
+Murid login, mengerjakan tes sekali dengan batas waktu, lalu submit. Skor dihitung
+di server dan hanya terlihat owner serta guru yang mengampu murid tersebut.
 
 Dokumen acuan:
 
@@ -47,6 +48,9 @@ Dokumen acuan:
    1. `supabase/migrations/0001_init.sql`
    2. `supabase/migrations/0002_admin_functions.sql`
    3. `supabase/migrations/0003_student_access.sql`
+   4. `supabase/migrations/0004_allow_question_text_edits_after_attempts.sql`
+   5. `supabase/migrations/0005_allow_test_level_and_duration_edits.sql`
+   6. `supabase/migrations/0006_multi_teacher_owner.sql`
 
    Alternatif dengan Supabase CLI:
 
@@ -64,7 +68,7 @@ Dokumen acuan:
      tidak bisa menerima email konfirmasi).
    - Pastikan Site URL mengarah ke domain aplikasi (lokal: `http://localhost:3000`).
 
-5. Buat akun admin:
+5. Buat akun owner:
 
    ```bash
    npm run seed:admin
@@ -72,7 +76,8 @@ Dokumen acuan:
 
    Script membaca `ADMIN_SEED_USERNAME` dan `ADMIN_SEED_PASSWORD`, membuat user
    Auth dengan email `<username>@<STUDENT_EMAIL_DOMAIN>`, lalu upsert profil
-   `role = admin`. Aman dijalankan ulang (password admin diperbarui).
+   `role = admin` (alias owner). Akun guru dibuat owner lewat UI `/admin/teachers`.
+   Aman dijalankan ulang (password owner diperbarui).
 
 6. (Opsional) Isi data demo untuk pengembangan:
 
@@ -106,7 +111,7 @@ Dokumen acuan:
 | `ADMIN_SEED_PASSWORD` | untuk `seed:admin` | script | Minimal 8 karakter |
 | `TEST_STUDENT_USERNAME` / `TEST_STUDENT_PASSWORD` | untuk `verify:security` | script | Akun murid uji |
 | `TEST_INACTIVE_USERNAME` / `TEST_INACTIVE_PASSWORD` | opsional | script | Akun nonaktif untuk uji AC-11 |
-| `TEST_ADMIN_USERNAME` / `TEST_ADMIN_PASSWORD` | opsional | script | Akun admin uji |
+| `TEST_ADMIN_USERNAME` / `TEST_ADMIN_PASSWORD` | opsional | script | Akun owner/admin uji |
 
 Catatan: jika Supabase menolak domain email sintetis, ganti
 `STUDENT_EMAIL_DOMAIN` dengan domain lain yang valid secara format (mis.
@@ -122,7 +127,7 @@ yang sama.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run build` | Build produksi |
 | `npm run start` | Jalankan hasil build |
-| `npm run seed:admin` | Buat/perbarui akun admin |
+| `npm run seed:admin` | Buat/perbarui akun owner (role `admin`) |
 | `npm run seed:demo` | Data demo (hanya non-production) |
 | `npm run verify:security` | Uji AC keamanan terhadap project Supabase nyata |
 
@@ -141,44 +146,53 @@ Hentikan dev server sebelum `npm run build` agar worker build tidak bentrok.
 - `reset_attempt` dan insert langsung `attempts` / `attempt_answers` ditolak
 - upload media oleh murid ditolak
 - pendaftaran publik ditolak
-- admin uji dapat membaca `answer_keys`
+- owner uji dapat membaca `answer_keys`
 
-Siapkan dulu akun uji lewat UI admin, isi `TEST_*` di `.env.local`, lalu jalankan.
+Siapkan dulu akun uji lewat UI owner, isi `TEST_*` di `.env.local`, lalu jalankan.
 Pemeriksaan yang butuh project nyata akan dilewati (status `LEWATI`) jika datanya
-belum ada. Verifikasi RLS tambahan tersedia di `docs/verification.sql`.
+belum ada. Verifikasi RLS tambahan, termasuk isolasi antar-guru, tersedia di
+`docs/verification.sql`.
 
 ## Struktur proyek
 
 ```text
 app/(auth)/login          Login
-app/admin                 Dashboard, murid, tes, soal, hasil
+app/admin                 Dashboard, guru, murid, tes, soal, hasil
+app/admin/teachers        Daftar & detail guru, penugasan murid
 app/(exam)/tests/[id]/take Halaman pengerjaan (tanpa shell murid)
 app/(student)/tests       Daftar tes, instruksi, selesai
 app/api/media             Signed URL media (server, no-store)
 components/ui             Komponen dasar sesuai DESIGN.md
-components/admin          Komponen admin
+components/admin          Komponen admin/guru
 components/student        Komponen murid
 lib/supabase              client, server, admin, proxy, tipe database
 lib/validation            Skema zod
 supabase/migrations       Skema, RLS, fungsi, storage
-scripts                   Seed admin, seed demo, verifikasi keamanan
+scripts                   Seed owner, seed demo, verifikasi keamanan
 proxy.ts                  Refresh sesi Supabase (pengganti middleware)
 ```
 
 ## Alur utama
 
-1. Admin membuat tes (`draft`), menambah soal Listening/Reading beserta opsi,
-   kunci, dan media.
-2. Admin membuka tes. Tes hanya bisa `open` jika punya minimal satu soal dan semua
-   soal punya kunci. Setelah ada pengerjaan, soal/kunci/durasi terkunci (BR-6).
-3. Murid membuka `/tests`, membaca instruksi, menekan Mulai. `start_attempt`
+1. Owner membuat akun guru, lalu menugaskan murid ke guru. Satu murid hanya
+   memiliki satu guru aktif; mutasi murid mengakhiri relasi lama tanpa menghapus
+   riwayat hasil.
+2. Owner atau guru membuat tes (`draft`), menambah soal Listening/Reading beserta
+   opsi, kunci, dan media. Tes dapat ditugaskan ke beberapa guru; tes owner tanpa
+   penugasan berlaku sebagai tes global.
+3. Tes dibuka jika punya minimal satu soal dan semua soal punya kunci. Setelah ada
+   pengerjaan, struktur soal, media, jumlah opsi, dan durasi terkunci; teks soal,
+   teks opsi, dan kunci masih dapat diperbaiki dengan konsekuensi skor dihitung
+   ulang (BR-6).
+4. Murid membuka `/tests`, membaca instruksi, menekan Mulai. `start_attempt`
    membuat attempt dengan `expires_at` dari jam server.
-4. Halaman pengerjaan memuat semua soal sekali, menyimpan jawaban lewat
+5. Halaman pengerjaan memuat semua soal sekali, menyimpan jawaban lewat
    `save_answer`, dan memakai timer berbasis `expires_at` server.
-5. Saat waktu habis atau murid mengumpulkan, `submit_attempt` menghitung skor dari
+6. Saat waktu habis atau murid mengumpulkan, `submit_attempt` menghitung skor dari
    `answer_keys`. Murid melihat halaman selesai tanpa skor.
-6. Admin melihat dashboard, tabel hasil dengan filter, detail per soal, export CSV,
-   dan dapat me-reset pengerjaan.
+7. Owner melihat KPI tiap guru, seluruh hasil, detail per soal, dan export CSV.
+   Guru hanya melihat murid yang diampu, hasil mereka, dan tes yang dapat diakses;
+   guru dapat me-reset pengerjaan muridnya.
 
 ## Deploy ke Vercel
 
@@ -199,7 +213,8 @@ proxy.ts                  Refresh sesi Supabase (pengganti middleware)
 - Perlindungan salin soal bersifat *best effort*: watermark nama murid,
   `user-select: none`, audio tanpa unduh. Screenshot/foto layar tidak bisa dicegah
   (SEC-8).
-- Reset password murid dilakukan admin lewat UI; tidak ada reset lewat email.
-- Tidak ada halaman pendaftaran publik dan tidak ada manajemen admin lewat UI.
+- Reset password murid dilakukan owner lewat UI; tidak ada reset lewat email.
+- Tidak ada halaman pendaftaran publik. Akun owner dibuat lewat `seed:admin`;
+  akun guru dan murid dibuat owner lewat UI.
 - Timer memakai `expires_at` server. Mengubah jam perangkat tidak berpengaruh.
 - Skor adalah jumlah benar dan persentase, bukan skala resmi HSK.

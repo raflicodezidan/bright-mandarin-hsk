@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { ToastProvider } from "@/components/ui/toast";
@@ -9,11 +9,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireAdmin();
+  const profile = await requireStaff();
+  const role = profile.role === "teacher" ? "teacher" : "owner";
 
   return (
     <ToastProvider>
       <AdminShell
+        role={role}
         userName={profile.full_name}
         email={profile.username}
         logout={

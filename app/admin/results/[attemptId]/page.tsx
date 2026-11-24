@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { ResetAttemptButton } from "@/components/admin/results/reset-attempt-button";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import {
   attemptDurationMinutes,
@@ -32,7 +32,7 @@ export default async function ResultDetailPage({
 }: {
   params: Promise<{ attemptId: string }>;
 }) {
-  await requireAdmin();
+  await requireStaff();
   const { attemptId } = await params;
   const supabase = await createClient();
 
@@ -45,6 +45,23 @@ export default async function ResultDetailPage({
     .maybeSingle();
 
   if (!attempt.data) notFound();
+
+  const assignment = await supabase
+    .from("teacher_students")
+    .select("teacher_id")
+    .eq("student_id", attempt.data.student_id)
+    .is("ended_at", null)
+    .maybeSingle();
+
+  let teacherName: string | null = null;
+  if (assignment.data?.teacher_id) {
+    const teacher = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", assignment.data.teacher_id)
+      .maybeSingle();
+    teacherName = teacher.data?.full_name ?? null;
+  }
 
   const [questionsResult, answersResult] = await Promise.all([
     supabase
@@ -132,7 +149,7 @@ export default async function ResultDetailPage({
         </div>
 
         <Card>
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div className="flex flex-col gap-1">
               <dt className="text-xs text-text-muted">Murid</dt>
               <dd className="text-sm text-text">
@@ -140,6 +157,12 @@ export default async function ResultDetailPage({
                 <span className="font-mono text-xs text-text-muted">
                   {attempt.data.profiles?.username}
                 </span>
+              </dd>
+            </div>
+            <div className="flex flex-col gap-1">
+              <dt className="text-xs text-text-muted">Guru</dt>
+              <dd className="text-sm text-text">
+                {teacherName ?? "Belum ditugaskan"}
               </dd>
             </div>
             <div className="flex flex-col gap-1">

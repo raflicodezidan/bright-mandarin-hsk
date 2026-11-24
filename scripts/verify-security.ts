@@ -165,7 +165,7 @@ async function main() {
     );
   }
 
-  // reset_attempt hanya admin.
+  // reset_attempt hanya owner/guru pengampu.
   if (finished) {
     const reset = await student.rpc("reset_attempt", { p_attempt_id: finished.id });
     record(
@@ -227,7 +227,7 @@ async function main() {
     signup.error?.message ?? "signup berhasil (salah)",
   );
 
-  // Admin uji (opsional) harus bisa membaca kunci.
+  // Owner uji (opsional) harus bisa membaca kunci.
   if (adminUsername && adminPassword) {
     const admin = createClient<Database>(url, anonKey, {
       auth: { persistSession: false },
@@ -237,17 +237,17 @@ async function main() {
       password: adminPassword,
     });
     if (adminLogin.error) {
-      record("Admin uji dapat login", false, adminLogin.error.message);
+      record("Owner uji dapat login", false, adminLogin.error.message);
     } else {
       const adminKeys = await admin.from("answer_keys").select("question_id").limit(1);
       record(
-        "Admin uji dapat membaca answer_keys",
+        "Owner uji dapat membaca answer_keys",
         !adminKeys.error,
         adminKeys.error?.message ?? "ok",
       );
     }
   } else {
-    skip("Admin uji dapat membaca answer_keys", "TEST_ADMIN_USERNAME/PASSWORD belum diisi.");
+    skip("Owner uji dapat membaca answer_keys", "TEST_ADMIN_USERNAME/PASSWORD belum diisi.");
   }
 
   // Bersihkan sesi.

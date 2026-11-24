@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { ResetAttemptButton } from "@/components/admin/results/reset-attempt-button";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { isOwnerRole, requireStaff } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import {
   attemptDurationMinutes,
@@ -43,7 +43,8 @@ export default async function ResultsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireAdmin();
+  const profile = await requireStaff();
+  const isOwner = isOwnerRole(profile.role);
   const raw = await searchParams;
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(raw)) {
@@ -52,17 +53,39 @@ export default async function ResultsPage({
   const filters = parseResultFilters(params);
   const supabase = await createClient();
 
-  const [studentsResult, testsResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, username")
-      .eq("role", "student")
-      .order("full_name"),
-    supabase
-      .from("tests")
-      .select("id, title, level")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [studentsResult, testsResult, teachersResult, assignmentsResult] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, username")
+        .eq("role", "student")
+        .order("full_name"),
+      supabase
+        .from("tests")
+        .select("id, title, level")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("role", "teacher"),
+      supabase
+        .from("teacher_students")
+        .select("student_id, teacher_id")
+        .is("ended_at", null),
+    ]);
+
+  const teacherNames = new Map(
+    (teachersResult.data ?? []).map((teacher) => [
+      teacher.id,
+      teacher.full_name,
+    ]),
+  );
+  const teacherByStudent = new Map(
+    (assignmentsResult.data ?? []).map((assignment) => [
+      assignment.student_id,
+      assignment.teacher_id,
+    ]),
+  );
 
   const students = studentsResult.data ?? [];
   const tests = testsResult.data ?? [];
@@ -79,7 +102,7 @@ export default async function ResultsPage({
   let query = supabase
     .from("attempts")
     .select(
-      "id, status, correct_count, total_count, listening_correct, listening_total, reading_correct, reading_total, started_at, submitted_at, profiles(full_name, username), tests(title, level)",
+      "id, student_id, status, correct_count, total_count, listening_correct, listening_total, reading_correct, reading_total, started_at, submitted_at, profiles(full_name, username), tests(title, level)",
       { count: "exact" },
     );
 
@@ -130,7 +153,11 @@ export default async function ResultsPage({
     <>
       <PageHeader
         title="Hasil"
-        description="Semua pengerjaan tes murid."
+        description={
+          isOwner
+            ? "Semua pengerjaan tes murid dari seluruh guru."
+            : "Pengerjaan tes murid yang Anda ampu."
+        }
         actions={
           <LinkButton
             href={`/admin/results/export?${exportQuery.toString()}`}
@@ -268,6 +295,9 @@ export default async function ResultsPage({
                 <TableRow>
                   <TableHead className="w-12">No</TableHead>
                   <TableHead className="w-[14%] min-w-[140px]">Murid</TableHead>
+                  {isOwner ? (
+                    <TableHead className="w-[12%]">Guru</TableHead>
+                  ) : null}
                   <TableHead className="w-[18%]">Tes</TableHead>
                   <TableHead className="w-[5%]">Level</TableHead>
                   <TableHead className="w-[10%]">Mulai</TableHead>
@@ -291,6 +321,7 @@ export default async function ResultsPage({
                     attempt.started_at,
                     attempt.submitted_at,
                   );
+                  const teacherId = teacherByStudent.get(attempt.student_id);
                   return (
                     <TableRow key={attempt.id}>
                       <TableCell className="font-mono text-xs tabular">
@@ -304,6 +335,13 @@ export default async function ResultsPage({
                           {attempt.profiles?.full_name ?? "-"}
                         </Link>
                       </TableCell>
+                      {isOwner ? (
+                        <TableCell className="text-text-muted">
+                          {teacherId
+                            ? teacherNames.get(teacherId) ?? "-"
+                            : "Belum ditugaskan"}
+                        </TableCell>
+                      ) : null}
                       <TableCell>{attempt.tests?.title ?? "-"}</TableCell>
                       <TableCell>HSK {attempt.tests?.level ?? "-"}</TableCell>
                       <TableCell className="whitespace-nowrap text-text-muted">

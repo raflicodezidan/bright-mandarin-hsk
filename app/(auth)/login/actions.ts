@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, staffHome } from "@/lib/auth";
 
 export type LoginState = { error?: string };
 
@@ -47,10 +47,10 @@ export async function loginAction(
 
   if (!session || !session.profile.is_active) {
     await supabase.auth.signOut();
-    return { error: "Akun tidak aktif. Hubungi admin." };
+    return { error: "Akun tidak aktif. Hubungi guru atau owner." };
   }
 
-  redirect(session.profile.role === "admin" ? "/admin" : "/tests");
+  redirect(staffHome(session.profile.role));
 }
 
 const logoutSession = async () => {
