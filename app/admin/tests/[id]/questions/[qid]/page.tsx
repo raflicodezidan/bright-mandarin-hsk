@@ -55,7 +55,7 @@ export default async function QuestionPage({
     const question = await supabase
       .from("questions")
       .select(
-        "id, test_id, section, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text), answer_keys(correct_option_id), interactive_answer_keys(answer)",
+        "id, test_id, section, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
       )
       .eq("id", qid)
       .maybeSingle();
@@ -75,10 +75,12 @@ export default async function QuestionPage({
     initial = {
       section: question.data.section,
       prompt: question.data.prompt,
-      options: options.map((option) => ({
-        label: option.label,
-        text: option.text,
-      })),
+        options: options.map((option) => ({
+          label: option.label,
+          text: option.text ?? "",
+          imagePath: option.image_path,
+          imageUrl: option.image_path ? `/api/media?path=${encodeURIComponent(option.image_path)}` : null,
+        })),
       correctLabel: correct?.label ?? "A",
       questionType: question.data.question_type,
       interactionConfig: question.data.interaction_config,

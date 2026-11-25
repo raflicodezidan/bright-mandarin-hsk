@@ -192,12 +192,14 @@ const cachedStorageFiles = unstable_cache(
     const admin = createAdminClient();
     const files = await collectFiles(admin, "", 0);
 
-    const [questionsResult, testsResult] = await Promise.all([
+    const [questionsResult, testsResult, optionImagesResult] = await Promise.all([
       admin.from("questions").select("image_path, audio_path"),
       admin.from("tests").select("pdf_path, student_pdf_path, listening_audio_path"),
+      admin.from("question_options").select("image_path"),
     ]);
     if (questionsResult.error) throw questionsResult.error;
     if (testsResult.error) throw testsResult.error;
+    if (optionImagesResult.error) throw optionImagesResult.error;
 
     const referenced = new Set<string>();
     for (const row of questionsResult.data ?? []) {
@@ -209,6 +211,7 @@ const cachedStorageFiles = unstable_cache(
       if (row.student_pdf_path) referenced.add(row.student_pdf_path);
       if (row.listening_audio_path) referenced.add(row.listening_audio_path);
     }
+    for (const row of optionImagesResult.data ?? []) if (row.image_path) referenced.add(row.image_path);
 
     return files
       .map((file) => ({

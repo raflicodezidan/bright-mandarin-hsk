@@ -1,9 +1,10 @@
 export type ImportedQuestionDraft = {
   sourceNumber: number;
   prompt: string;
-  options: { label: string; text: string }[];
+  options: { label: string; text: string; imageDataUrl?: string | null }[];
   correctLabel: string;
   warning: string | null;
+  questionType?: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
 };
 
 const QUESTION_START = /^\s*(\d{1,3})\s*[.)、]\s*(.*)$/u;
@@ -12,7 +13,7 @@ const ANSWER_KEY_LINE = /^(?:answer\s*key|答案|参考答案|听力答案|readi
 
 export function parseReadingPdfLines(lines: string[]): ImportedQuestionDraft[] {
   const drafts: ImportedQuestionDraft[] = [];
-  let current: { number: number; prompt: string; options: { label: string; text: string }[] } | null = null;
+  let current: { number: number; prompt: string; options: { label: string; text: string; imageDataUrl?: string | null }[] } | null = null;
   let answerKeyPage = false;
 
   const flush = () => {
@@ -66,6 +67,7 @@ export function parseReadingPdfLines(lines: string[]): ImportedQuestionDraft[] {
       current.options.push({
         label: optionMatch[1].toUpperCase(),
         text: optionMatch[2],
+        imageDataUrl: null,
       });
       continue;
     }

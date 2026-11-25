@@ -231,18 +231,21 @@ export type Database = {
           question_id: string;
           label: string;
           text: string;
+          image_path: string | null;
         };
         Insert: {
           id?: string;
           question_id: string;
           label: string;
           text: string;
+          image_path?: string | null;
         };
         Update: {
           id?: string;
           question_id?: string;
           label?: string;
           text?: string;
+          image_path?: string | null;
         };
         Relationships: [
           {

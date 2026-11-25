@@ -4,6 +4,7 @@ export type QuestionViewOption = {
   id: string;
   label: string;
   text: string;
+  imageUrl?: string | null;
 };
 
 export type QuestionViewData = {
@@ -91,9 +92,11 @@ export function QuestionView({
               >
                 {option.label}
               </span>
-              <span className="font-cjk text-option" lang="zh-Hans">
-                {option.text}
-              </span>
+              {option.text ? <span className="font-cjk text-option" lang="zh-Hans">{option.text}</span> : null}
+              {option.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={option.imageUrl} alt={`Gambar opsi ${option.label}`} className="max-h-40 max-w-full object-contain" />
+              ) : null}
             </button>
           );
         })}

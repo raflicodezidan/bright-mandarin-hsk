@@ -53,7 +53,7 @@ begin
     if v_label not in ('A', 'B', 'C', 'D', 'E') or v_label = any(v_labels) then
       raise exception using errcode = 'P0001', message = 'Label opsi tidak valid.';
     end if;
-    if v_text = '' then
+    if v_text = '' and nullif(trim(v_option ->> 'image_path'), '') is null then
       raise exception using errcode = 'P0001', message = 'Teks opsi wajib diisi.';
     end if;
     v_labels := array_append(v_labels, v_label);
@@ -87,8 +87,8 @@ begin
   delete from public.answer_keys k where k.question_id=v_question_id;
   delete from public.question_options o where o.question_id=v_question_id;
   for v_option in select * from jsonb_array_elements(p_options) loop
-    insert into public.question_options(question_id,label,text)
-    values (v_question_id,upper(trim(v_option->>'label')),trim(v_option->>'text'))
+    insert into public.question_options(question_id,label,text,image_path)
+    values (v_question_id,upper(trim(v_option->>'label')),nullif(trim(v_option->>'text'),''),nullif(trim(v_option->>'image_path'),''))
     returning id into v_correct_option_id;
     if upper(trim(v_option->>'label'))=upper(trim(p_correct_label)) then
       insert into public.answer_keys(question_id,correct_option_id) values (v_question_id,v_correct_option_id);
@@ -210,8 +210,8 @@ begin
       left join public.answer_keys k on k.question_id = o.question_id
       where o.question_id = v_question.id order by o.label
     loop
-      insert into public.question_options (question_id, label, text)
-      values (v_new_question_id, v_option.label, v_option.text)
+      insert into public.question_options (question_id, label, text, image_path)
+      values (v_new_question_id, v_option.label, v_option.text, v_option.image_path)
       returning id into v_new_option_id;
       if v_option.is_correct then v_correct_new := v_new_option_id; end if;
     end loop;

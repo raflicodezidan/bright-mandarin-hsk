@@ -19,7 +19,7 @@ export type PdfTakeQuestion = {
   audioPath: string | null;
   pdfPath: string | null;
   pdfOverlays: PdfOverlay[];
-  options: { id: string; label: string; text: string }[];
+  options: { id: string; label: string; text: string; imagePath?: string | null; imageUrl?: string | null }[];
   questionType: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
   interactionConfig: unknown;
 };

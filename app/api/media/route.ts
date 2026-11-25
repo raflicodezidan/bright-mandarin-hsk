@@ -64,7 +64,30 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (!question.data) {
-      if (!isSharedAudio) return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
+      if (isSharedAudio) {
+        const shared = await supabase.from("tests").select("id").eq("listening_audio_path", path).maybeSingle();
+        if (shared.data) {
+          if (!isStaffRole(session.profile.role)) {
+            const active = await supabase.rpc("has_active_attempt", { p_test_id: shared.data.id });
+            if (active.data !== true) return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+          }
+          const signed = await createAdminClient().storage.from(BUCKET).createSignedUrl(path, 600);
+          if (signed.error || !signed.data?.signedUrl) return NextResponse.json({ error: "Gagal memuat media." }, { status: 500, headers: noStore });
+          return NextResponse.redirect(signed.data.signedUrl, { status: 302, headers: noStore });
+        }
+      }
+      const option = await supabase.from("question_options").select("question_id").eq("image_path", path).maybeSingle();
+      if (option.data) {
+        const owner = await supabase.from("questions").select("test_id").eq("id", option.data.question_id).maybeSingle();
+        if (!owner.data) return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
+        if (!isStaffRole(session.profile.role)) {
+          const active = await supabase.rpc("has_active_attempt", { p_test_id: owner.data.test_id });
+          if (active.data !== true) return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+        }
+        const signed = await createAdminClient().storage.from(BUCKET).createSignedUrl(path, 600);
+        if (signed.error || !signed.data?.signedUrl) return NextResponse.json({ error: "Gagal memuat media." }, { status: 500, headers: noStore });
+        return NextResponse.redirect(signed.data.signedUrl, { status: 302, headers: noStore });
+      }
       const shared = await supabase.from("tests").select("id").eq("listening_audio_path", path).maybeSingle();
       if (!shared.data) return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
       if (!isStaffRole(session.profile.role)) {

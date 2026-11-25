@@ -28,7 +28,10 @@ export const questionSectionSchema = z.enum(["listening", "reading"]);
 
 export const questionOptionSchema = z.object({
   label: z.string().regex(/^[A-E]$/),
-  text: z.string().trim().min(1, "Teks opsi wajib diisi.").max(2000),
+  text: z.string().trim().max(2000).default(""),
+  imagePath: z.string().max(300).nullable().optional(),
+}).refine((option) => option.text.length > 0 || Boolean(option.imagePath), {
+  message: "Isi teks atau unggah gambar untuk setiap opsi.",
 });
 
 export const questionSchema = z.object({

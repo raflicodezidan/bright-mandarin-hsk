@@ -33,7 +33,7 @@ import {
 
 type Mode = "choice" | "blank" | "matching" | "rearrange";
 type Section = "listening" | "reading";
-type Choice = { label: string; text: string };
+type Choice = { label: string; text: string; imageDataUrl?: string | null };
 type BlankDraft = {
   id: string;
   prompt: string;
@@ -507,7 +507,7 @@ export function PdfOverlayEditor({
     if (mode === "choice") {
       if (!prompt.trim()) return setError("Prompt soal wajib diisi.");
       if (options.length < 2 || options.some((option) => !option.text.trim())) {
-        return setError("Semua opsi wajib diisi.");
+        return setError("Semua opsi PDF pilihan ganda harus memiliki teks label opsi.");
       }
       if (
         choiceMarkers.length !== options.length ||
@@ -854,7 +854,7 @@ export function PdfOverlayEditor({
             </div>
 
             <div className="flex min-w-0 flex-col gap-4">
-            {section === "listening" ? (
+              {section === "listening" ? (
               <div className="flex flex-col gap-3 border-b border-border pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
@@ -955,7 +955,7 @@ export function PdfOverlayEditor({
                     Isi teks opsi, lalu klik posisi lingkaran A–E pada PDF. Klik
                     penanda untuk menghapus dan menaruh ulang.
                   </p>
-                  {options.map((option) => (
+              {options.map((option) => (
                     <div key={option.label} className="flex items-end gap-2">
                       <Field label={`Opsi ${option.label}`} htmlFor={`pdf-option-${option.label}`} className="flex-1">
                         <Input
@@ -976,6 +976,18 @@ export function PdfOverlayEditor({
                           disabled={disabled || pending}
                         />
                       </Field>
+                      <label className="flex items-center gap-1 pb-2 text-xs">
+                        <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="sr-only" aria-label={`Gambar opsi ${option.label}`} disabled={disabled || pending} onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          event.currentTarget.value = "";
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) { setError("Gambar opsi maksimal 2 MB."); return; }
+                          const reader = new FileReader();
+                          reader.onload = () => setOptions((current) => current.map((item) => item.label === option.label ? { ...item, imageDataUrl: typeof reader.result === "string" ? reader.result : null } : item));
+                          reader.readAsDataURL(file);
+                        }} />
+                        Gambar
+                      </label>
                       <label className="flex items-center gap-1 pb-2 text-xs">
                         <input
                           type="radio"

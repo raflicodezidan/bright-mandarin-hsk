@@ -22,12 +22,12 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { Json } from "@/lib/supabase/database.types";
 
 type Section = Tables<"questions">["section"];
-type OptionDraft = { key: string; text: string };
+type OptionDraft = { key: string; text: string; imageFile: File | null; imagePath: string | null; imageUrl: string | null };
 
 let optionCounter = 0;
 function newOption(text = ""): OptionDraft {
   optionCounter += 1;
-  return { key: `opt-${optionCounter}`, text };
+  return { key: `opt-${optionCounter}`, text, imageFile: null, imagePath: null, imageUrl: null };
 }
 
 const LABELS = ["A", "B", "C", "D", "E"] as const;
@@ -35,7 +35,7 @@ const LABELS = ["A", "B", "C", "D", "E"] as const;
 export type QuestionFormInitial = {
   section: Section;
   prompt: string;
-  options: { label: string; text: string }[];
+  options: { label: string; text: string; imagePath?: string | null; imageUrl?: string | null }[];
   correctLabel: string;
   questionType?: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
   interactionConfig?: Json;
@@ -76,7 +76,7 @@ export function QuestionForm({
   const [prompt, setPrompt] = React.useState(initial?.prompt ?? "");
   const [options, setOptions] = React.useState<OptionDraft[]>(
     initial && initial.options.length >= 2
-      ? initial.options.map((option) => newOption(option.text))
+      ? initial.options.map((option) => ({ ...newOption(option.text ?? ""), imagePath: option.imagePath ?? null, imageUrl: option.imageUrl ?? null }))
       : [newOption(), newOption()],
   );
   const [correctIndex, setCorrectIndex] = React.useState(() => {
@@ -88,6 +88,7 @@ export function QuestionForm({
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [audioFile, setAudioFile] = React.useState<File | null>(null);
+  const optionImageInputRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
   const [removeImage, setRemoveImage] = React.useState(false);
   const [removeAudio, setRemoveAudio] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -205,6 +206,7 @@ export function QuestionForm({
       payload.set("options", JSON.stringify(options.map((option, index) => ({
         label: LABELS[index],
         text: option.text.trim(),
+        imagePath: option.imagePath,
       }))));
       payload.set("correctLabel", LABELS[correctIndex]);
       startTransition(async () => {
@@ -224,8 +226,8 @@ export function QuestionForm({
       setError("Soal harus memiliki 2 sampai 5 opsi.");
       return;
     }
-    if (options.some((option) => option.text.trim() === "")) {
-      setError("Semua opsi wajib diisi.");
+    if (options.some((option) => option.text.trim() === "" && !option.imageFile && !option.imagePath)) {
+      setError("Setiap opsi perlu berisi teks atau gambar.");
       return;
     }
     if (section === "listening" && !hasAudio) {
@@ -248,12 +250,11 @@ export function QuestionForm({
     payload.set("prompt", prompt);
     payload.set(
       "options",
-      JSON.stringify(
-        options.map((option, index) => ({
-          label: LABELS[index],
-          text: option.text.trim(),
-        })),
-      ),
+      JSON.stringify(options.map((option, index) => ({
+        label: LABELS[index],
+        text: option.text.trim(),
+        imagePath: option.imagePath,
+      }))),
     );
     payload.set("correctLabel", LABELS[correctIndex]);
     payload.set("existingImage", existingImage ?? "");
@@ -262,6 +263,9 @@ export function QuestionForm({
     if (removeAudio) payload.set("removeAudio", "on");
     if (imageFile) payload.set("image", imageFile);
     if (audioFile) payload.set("audio", audioFile);
+    options.forEach((option, index) => {
+      if (option.imageFile) payload.set(`optionImage:${LABELS[index]}`, option.imageFile);
+    });
 
     startTransition(async () => {
       const result = await saveQuestionAction(payload);
@@ -412,9 +416,28 @@ export function QuestionForm({
                 lang="zh-Hans"
                 maxLength={2000}
                 aria-label={`Teks opsi ${LABELS[index]}`}
-                required
+                placeholder="Teks opsi (opsional jika memakai gambar)"
                 disabled={pending}
               />
+              <input
+                ref={(element) => { optionImageInputRefs.current[option.key] = element; }}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  setOptions((current) => current.map((row) => row.key === option.key ? { ...row, imageFile: file, imagePath: file ? null : row.imagePath } : row));
+                }}
+                disabled={pending || textOnly}
+              />
+              <Button type="button" size="sm" variant="secondary" onClick={() => optionImageInputRefs.current[option.key]?.click()} disabled={pending || textOnly}>
+              {option.imageFile?.name ?? (option.imagePath ? "Ganti gambar" : "Unggah gambar")}
+            </Button>
+              {option.imageUrl && !option.imageFile ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={option.imageUrl} alt={`Gambar opsi ${LABELS[index]}`} className="max-h-28 max-w-40 object-contain" />
+              ) : null}
             {!textOnly ? (
               <Button
                 variant="ghost"

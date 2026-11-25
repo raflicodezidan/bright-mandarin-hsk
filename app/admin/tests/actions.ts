@@ -236,10 +236,14 @@ export async function saveQuestionAction(
     return { ok: false, error: "Opsi jawaban tidak valid." };
   }
 
+  const rawOptions = options;
   const parsed = questionSchema.safeParse({
     section,
     prompt,
-    options,
+    options: (Array.isArray(rawOptions) ? rawOptions : []).map((value) => {
+      const option = value as { label?: string; text?: string; imagePath?: string | null };
+      return { label: option.label ?? "", text: option.text || (option.imagePath ? `Gambar opsi ${option.label ?? ""}` : ""), imagePath: option.imagePath };
+    }),
     correctLabel,
   });
 
@@ -254,6 +258,18 @@ export async function saveQuestionAction(
   let audioPath = removeAudio ? null : existingAudio || null;
   const uploadedPaths: string[] = [];
   const replacedPaths: string[] = [];
+  const parsedOptions = parsed.data.options.map((option) => ({ ...option }));
+  for (const option of parsedOptions) {
+    const imageFile = formData.get(`optionImage:${option.label}`);
+    if (!(imageFile instanceof File) || imageFile.size === 0) continue;
+    const uploaded = await uploadMedia(imageFile, "images");
+    if (!uploaded.ok) {
+      await removeMedia(uploadedPaths);
+      return uploaded;
+    }
+    uploadedPaths.push(uploaded.path);
+    (option as { imagePath?: string }).imagePath = uploaded.path;
+  }
 
   const imageFile = formData.get("image");
   if (imageFile instanceof File && imageFile.size > 0) {
@@ -292,7 +308,7 @@ export async function saveQuestionAction(
     p_prompt: parsed.data.prompt,
     p_image_path: imagePath,
     p_audio_path: audioPath,
-    p_options: parsed.data.options,
+    p_options: parsedOptions,
     p_correct_label: parsed.data.correctLabel,
   });
 
@@ -422,7 +438,7 @@ export async function saveInteractiveQuestionTextOnlyAction(input: unknown): Pro
 export async function saveImportedQuestionAction(input: {
   testId: string;
   prompt: string;
-  options: { label: string; text: string }[];
+  options: { label: string; text: string; imageDataUrl?: string | null; imagePath?: string | null }[];
   correctLabel: string;
 }): Promise<TestActionResult<{ questionId: string }>> {
   const denied = await guardStaff();
@@ -434,7 +450,7 @@ export async function saveImportedQuestionAction(input: {
   const parsed = questionSchema.safeParse({
     section: "reading",
     prompt: input.prompt,
-    options: input.options,
+    options: input.options.map(({ label, text, imageDataUrl, imagePath }) => ({ label, text: text || (imageDataUrl || imagePath ? `Gambar opsi ${label}` : ""), imagePath })),
     correctLabel: input.correctLabel,
   });
   if (!parsed.success) {
@@ -460,6 +476,26 @@ export async function saveImportedQuestionAction(input: {
     return { ok: false, error: "Hanya pemilik tes yang dapat mengubah soal." };
   }
 
+  const optionImageFiles = parsed.data.options.map((option, index) => ({ ...option, imageDataUrl: input.options[index]?.imageDataUrl ?? null }));
+  const uploadedOptionImages: string[] = [];
+  for (const option of optionImageFiles) {
+    const dataUrl = option.imageDataUrl;
+    if (!dataUrl) continue;
+    const match = dataUrl.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) return { ok: false, error: "Data gambar OCR tidak valid." };
+    const mime = match[1] === "jpeg" ? "image/jpeg" : `image/${match[1]}`;
+    const bytes = Buffer.from(match[2], "base64");
+    if (bytes.byteLength > 2 * 1024 * 1024) return { ok: false, error: "Gambar opsi maksimal 2 MB." };
+    const uploaded = await uploadMedia(new File([bytes], `option-${option.label}.${match[1]}`, { type: mime }), "images");
+    if (!uploaded.ok) {
+      await removeMedia(uploadedOptionImages);
+      return uploaded;
+    }
+    uploadedOptionImages.push(uploaded.path);
+    (option as { imagePath?: string }).imagePath = uploaded.path;
+    (option as { imageDataUrl?: string }).imageDataUrl = undefined;
+  }
+
   const { data, error } = await supabase.rpc("save_question", {
     p_test_id: parsedTestId.data,
     p_question_id: null,
@@ -467,16 +503,22 @@ export async function saveImportedQuestionAction(input: {
     p_prompt: parsed.data.prompt,
     p_image_path: null,
     p_audio_path: null,
-    p_options: parsed.data.options,
+    p_options: optionImageFiles.map((option) => {
+      const imagePath = (option as { imagePath?: string }).imagePath;
+      return { label: option.label, text: option.text || `Gambar opsi ${option.label}`, image_path: imagePath };
+    }),
     p_correct_label: parsed.data.correctLabel,
   });
 
   if (error || !data) {
+    await removeMedia(uploadedOptionImages);
     return {
       ok: false,
       error: errorMessage(error, "Gagal menyimpan soal impor. Coba lagi."),
     };
   }
+
+  if (uploadedOptionImages.length) revalidateTag(STORAGE_FILES_TAG, "max");
 
   revalidatePath(`/admin/tests/${parsedTestId.data}`);
   return { ok: true, data: { questionId: data } };
@@ -582,15 +624,12 @@ export async function deleteQuestionAction(
 
   if (!question) return { ok: false, error: "Soal tidak ditemukan." };
 
+  const { data: optionRows } = await supabase.from("question_options").select("image_path").eq("question_id", questionId);
   const { error } = await supabase.rpc("delete_question", {
     p_question_id: questionId,
   });
-
-  if (error) {
-    return { ok: false, error: errorMessage(error, "Gagal menghapus soal.") };
-  }
-
-  const orphans = [question.image_path, question.audio_path].filter(
+  if (error) return { ok: false, error: errorMessage(error, "Gagal menghapus soal.") };
+  const orphans = [question.image_path, question.audio_path, ...(optionRows ?? []).map((option) => option.image_path)].filter(
     (path): path is string => Boolean(path),
   );
   await removeMedia(orphans);
@@ -641,13 +680,16 @@ export async function deleteTestAction(
   const { data: testMedia } = await supabase.from("tests").select("pdf_path, student_pdf_path, listening_audio_path").eq("id", testId).maybeSingle();
   const { data: questions } = await supabase
     .from("questions")
-    .select("image_path, audio_path")
+    .select("id, image_path, audio_path")
     .eq("test_id", testId);
+
+  const questionIds = (questions ?? []).map((question) => question.id);
+  const { data: optionImages } = await supabase.from("question_options").select("image_path").in("question_id", questionIds.length ? questionIds : ["00000000-0000-0000-0000-000000000000"]);
 
   const mediaPaths = (questions ?? [])
     .flatMap((question) => [question.image_path, question.audio_path])
     .filter((path): path is string => Boolean(path));
-  const testPaths = [testMedia?.pdf_path, testMedia?.student_pdf_path, testMedia?.listening_audio_path].filter((path): path is string => Boolean(path));
+  const testPaths = [testMedia?.pdf_path, testMedia?.student_pdf_path, testMedia?.listening_audio_path, ...(optionImages ?? []).map((option) => option.image_path)].filter((path): path is string => Boolean(path));
 
   const { data: deleted, error } = await supabase
     .from("tests")
@@ -995,6 +1037,26 @@ export async function savePdfChoiceQuestionAction(
     return { ok: false, error: "Setiap opsi harus memiliki tepat satu lingkaran dan satu kunci benar." };
   }
 
+  const choiceOptions = parsed.data.options.map((option) => ({ ...option, imageDataUrl: (option as { imageDataUrl?: string }).imageDataUrl }));
+  const uploadedOptionImages: string[] = [];
+  for (const option of choiceOptions) {
+    const dataUrl = option.imageDataUrl;
+    if (!dataUrl) continue;
+    const match = dataUrl.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) return { ok: false, error: "Gambar opsi tidak valid." };
+    const bytes = Buffer.from(match[2], "base64");
+    if (bytes.byteLength > 2 * 1024 * 1024) return { ok: false, error: "Gambar opsi maksimal 2 MB." };
+    const type = match[1] === "jpeg" ? "image/jpeg" : `image/${match[1]}`;
+    const upload = await uploadMedia(new File([bytes], `option-${option.label}.${match[1]}`, { type }), "images");
+    if (!upload.ok) {
+      await removeMedia(uploadedOptionImages);
+      return upload;
+    }
+    uploadedOptionImages.push(upload.path);
+    (option as { imagePath?: string }).imagePath = upload.path;
+    (option as { imageDataUrl?: string }).imageDataUrl = undefined;
+  }
+
   let questionAudioPath: string | null = null;
   if (parsed.data.section === "listening") {
     const { data: testAudio } = await managed.supabase
@@ -1004,6 +1066,7 @@ export async function savePdfChoiceQuestionAction(
       .maybeSingle();
     questionAudioPath = testAudio?.listening_audio_path ?? null;
     if (!questionAudioPath) {
+      await removeMedia(uploadedOptionImages);
       return { ok: false, error: "Unggah audio Listening bersama atau buat soal dengan audio per-soal." };
     }
   }
@@ -1015,10 +1078,11 @@ export async function savePdfChoiceQuestionAction(
     p_prompt: parsed.data.prompt,
     p_image_path: null,
     p_audio_path: questionAudioPath,
-    p_options: parsed.data.options,
+    p_options: choiceOptions.map((option) => ({ label: option.label, text: option.text || `Gambar opsi ${option.label}`, image_path: option.imagePath })),
     p_correct_label: parsed.data.correctLabel,
   });
   if (error || !questionId) {
+    await removeMedia(uploadedOptionImages);
     return { ok: false, error: errorMessage(error, "Gagal menyimpan soal PDF.") };
   }
 
@@ -1033,8 +1097,10 @@ export async function savePdfChoiceQuestionAction(
     .eq("id", questionId);
   if (configError) {
     await managed.supabase.rpc("delete_question", { p_question_id: questionId });
+    await removeMedia(uploadedOptionImages);
     return { ok: false, error: "Gagal menyimpan posisi lingkaran opsi." };
   }
+  if (uploadedOptionImages.length) revalidateTag(STORAGE_FILES_TAG, "max");
   revalidatePath(`/admin/tests/${parsed.data.testId}`);
   return { ok: true, data: { questionId } };
 }

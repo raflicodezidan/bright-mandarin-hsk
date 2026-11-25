@@ -67,7 +67,7 @@ export default async function ResultDetailPage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, question_type, question_options(id, label, text), answer_keys(correct_option_id), interactive_answer_keys(answer)",
+        "id, section, position, prompt, question_type, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
       )
       .eq("test_id", attempt.data.test_id)
       .order("position", { ascending: true }),

@@ -46,7 +46,7 @@ export default async function TakePage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text)",
+        "id, section, position, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text, image_path)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -104,7 +104,7 @@ export default async function TakePage({
       interactionConfig: question.interaction_config ?? {},
       options: [...(question.question_options ?? [])]
         .sort((a, b) => a.label.localeCompare(b.label))
-        .map((option) => ({ id: option.id, label: option.label, text: option.text })),
+          .map((option) => ({ id: option.id, label: option.label, text: option.text ?? "", imagePath: option.image_path, imageUrl: option.image_path ? `/api/media?path=${encodeURIComponent(option.image_path)}` : null })),
     };
   });
 

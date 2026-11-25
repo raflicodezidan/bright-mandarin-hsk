@@ -9,6 +9,7 @@ import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { saveImportedQuestionAction, uploadTestPdfAction } from "@/app/admin/tests/actions";
+import { createWorker } from "tesseract.js";
 import {
   parseReadingPdfLines,
   type ImportedQuestionDraft,
@@ -91,7 +92,10 @@ export function PdfQuestionImporter({
           row.push({ x: item.transform[4], text: item.str });
           rows.set(y, row);
         }
-        if (rows.size === 0) imageCount += 1;
+          if (rows.size === 0) {
+            imageCount += 1;
+            continue;
+          }
         lines.push(
           ...[...rows.entries()]
             .sort(([a], [b]) => b - a)
@@ -100,11 +104,37 @@ export function PdfQuestionImporter({
       }
       await loadingTask.destroy();
 
-      const parsed = parseReadingPdfLines(lines);
+      let parsed = parseReadingPdfLines(lines);
+      if (parsed.length === 0 && imageCount > 0) {
+        setNotice("OCR lokal Mandarin/Inggris sedang dijalankan. PDF tetap diproses di browser.");
+        const worker = await createWorker("chi_sim+eng", 1, {
+          langPath: "https://tessdata.projectnaptha.com/4.0.0",
+          logger: (message) => {
+            if (message.status === "recognizing text") {
+              setNotice(`OCR lokal sedang memindai: ${Math.round(message.progress * 100)}%`);
+            }
+          },
+        });
+        const ocrLines: string[] = [];
+        for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) {
+          const page = await pdf.getPage(pageNo);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext("2d");
+          if (!context) continue;
+          await page.render({ canvas, canvasContext: context, viewport }).promise;
+          const recognized = await worker.recognize(canvas);
+          ocrLines.push(...recognized.data.text.split(/\r?\n/u));
+        }
+        await worker.terminate();
+        parsed = parseReadingPdfLines(ocrLines);
+      }
       if (parsed.length === 0) {
         setError(
-          imageCount === pdf.numPages
-            ? "PDF ini tampaknya berupa hasil scan/gambar. Ekstraksi OCR belum tersedia; silakan buat soal manual dari dokumen tersebut."
+          imageCount > 0
+            ? "OCR lokal tidak menemukan soal yang bisa diparsing. Silakan tinjau PDF dan buat draft manual."
             : "Belum ditemukan soal pilihan ganda yang dapat diimpor. PDF tetap diproses hanya di browser.",
         );
         return;
@@ -112,7 +142,7 @@ export function PdfQuestionImporter({
 
       setDrafts(parsed);
       setNotice(
-        `PDF disimpan secara privat (${pdf.numPages} halaman). Gunakan editor di bawah untuk menaruh lingkaran opsi pada halaman asli.${parsed.length ? ` Ekstraksi teks juga mendeteksi ${parsed.length} kandidat pilihan ganda.` : " Ekstraksi teks tidak menemukan kandidat otomatis."}${imageCount > 0 ? ` ${imageCount} halaman tampak berupa gambar.` : ""}`,
+        `PDF disimpan secara privat (${pdf.numPages} halaman). Ekstraksi mendeteksi ${parsed.length} kandidat pilihan ganda. Tinjau prompt, opsi, kunci, dan tipe soal sebelum menyimpan.`,
       );
     } catch {
       setError("PDF gagal dibaca. Coba file lain atau masukkan soal melalui editor.");
@@ -188,7 +218,11 @@ export function PdfQuestionImporter({
             {drafts.map((draft, index) => (
               <div key={`${draft.sourceNumber}-${index}`} className="flex flex-col gap-3 border border-border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">Draft dari nomor PDF {draft.sourceNumber}</h3>
+                    <div>
+                      <h3 className="text-sm font-semibold">Draft dari nomor PDF {draft.sourceNumber}</h3>
+                      {draft.warning ? <p className="text-xs text-warning">{draft.warning}</p> : null}
+                    </div>
+                  {draft.warning ? <span className="text-xs text-warning">{draft.warning}</span> : null}
                   <Button
                     type="button"
                     size="sm"
@@ -201,6 +235,20 @@ export function PdfQuestionImporter({
                     Simpan soal
                   </Button>
                 </div>
+                <Field label="Tipe soal" htmlFor={`pdf-type-${index}`} required>
+                  <select
+                    id={`pdf-type-${index}`}
+                    value={draft.questionType ?? "multiple_choice"}
+                    className="h-10 w-full rounded-[2px] border border-border-strong bg-surface px-3 text-sm"
+                    onChange={(event) => setDrafts((items) => updateDraft(items, index, (item) => ({ ...item, questionType: event.target.value as ImportedQuestionDraft["questionType"] })))}
+                    disabled={pending}
+                  >
+                    <option value="multiple_choice">Pilihan ganda</option>
+                    <option value="matching">Matching</option>
+                    <option value="hanzi_blank">Isian Hanzi</option>
+                    <option value="rearrange_sentence">Susun kalimat</option>
+                  </select>
+                </Field>
                 <Field label="Teks soal" htmlFor={`pdf-prompt-${index}`} required>
                   <Textarea
                     id={`pdf-prompt-${index}`}
@@ -213,7 +261,7 @@ export function PdfQuestionImporter({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {draft.options.map((option, optionIndex) => (
                     <Field key={option.label} label={`Opsi ${option.label}`} htmlFor={`pdf-option-${index}-${optionIndex}`} required>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2">
                         <Input
                           id={`pdf-option-${index}-${optionIndex}`}
                           value={option.text}
@@ -223,6 +271,30 @@ export function PdfQuestionImporter({
                             options: item.options.map((entry, i) => i === optionIndex ? { ...entry, text: event.target.value } : entry),
                           })))}
                           disabled={pending}
+                        />
+                        {option.imageDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={option.imageDataUrl} alt={`Gambar draft opsi ${option.label}`} className="max-h-32 max-w-full object-contain" />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                          disabled={pending}
+                          onChange={(event) => {
+                            const file = event.currentTarget.files?.[0];
+                            event.currentTarget.value = "";
+                            if (!file) return;
+                            if (file.size > 2 * 1024 * 1024) {
+                              setError("Gambar opsi maksimal 2 MB.");
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = () => setDrafts((items) => updateDraft(items, index, (item) => ({
+                              ...item,
+                              options: item.options.map((entry, i) => i === optionIndex ? { ...entry, imageDataUrl: typeof reader.result === "string" ? reader.result : null } : entry),
+                            })));
+                            reader.readAsDataURL(file);
+                          }}
                         />
                         <label className="flex shrink-0 items-center gap-1 text-xs">
                           <input
