@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -23,26 +23,62 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const question = await supabase
-    .from("questions")
-    .select("test_id")
-    .or(`image_path.eq.${path},audio_path.eq.${path}`)
-    .maybeSingle();
-  const pdfTestId = path.startsWith("pdfs/") ? path.split("/")[1] : null;
-  const pdfTest = pdfTestId
-    ? await supabase.from("tests").select("id").eq("id", pdfTestId).eq("pdf_path", path).maybeSingle()
-    : null;
+  const isPdf = path.startsWith("pdfs/");
+  const pdfTestId = isPdf ? path.split("/")[1] : null;
 
-  if (!question.data && !pdfTest?.data) {
-    return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
-  }
+  if (isPdf) {
+    const pdfTest = await supabase
+      .from("tests")
+      .select("id, pdf_path, student_pdf_path")
+      .eq("id", pdfTestId!)
+      .maybeSingle();
+    if (!pdfTest.data) {
+      return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
+    }
 
-  const active = await supabase.rpc("has_active_attempt", {
-    p_test_id: question.data?.test_id ?? pdfTestId!,
-  });
+    if (isStaffRole(session.profile.role)) {
+      // RLS tes sudah membatasi guru ke tes miliknya/ditugaskan. Staf boleh
+      // membuka PDF guru untuk pratinjau tanpa membuat pengerjaan.
+      const allowed =
+        pdfTest.data.pdf_path === path || pdfTest.data.student_pdf_path === path;
+      if (!allowed) {
+        return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+      }
+    } else {
+      // Murid hanya boleh membaca salinan PDF yang bersih, dan hanya selama
+      // pengerjaan aktif. PDF guru yang memuat kunci tidak pernah dikirim.
+      if (pdfTest.data.student_pdf_path !== path) {
+        return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+      }
+      const active = await supabase.rpc("has_active_attempt", { p_test_id: pdfTestId! });
+      if (active.data !== true) {
+        return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+      }
+    }
+  } else {
+    const question = await supabase
+      .from("questions")
+      .select("test_id")
+      .or(`image_path.eq.${path},audio_path.eq.${path}`)
+      .maybeSingle();
 
-  if (session.profile.role !== "student" || active.data !== true) {
-    return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+    if (!question.data) {
+      return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
+    }
+
+    if (isStaffRole(session.profile.role)) {
+      // RLS soal/tes sudah membatasi akses guru.
+      if (!question.data.test_id) {
+        return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+      }
+    } else {
+      const active = await supabase.rpc("has_active_attempt", {
+        p_test_id: question.data.test_id,
+      });
+      if (active.data !== true) {
+        return NextResponse.json({ error: "Akses ditolak." }, { status: 403, headers: noStore });
+      }
+    }
   }
 
   const admin = createAdminClient();

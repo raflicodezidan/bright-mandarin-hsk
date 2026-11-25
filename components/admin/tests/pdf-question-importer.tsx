@@ -65,7 +65,8 @@ export function PdfQuestionImporter({
         setNotice(null);
         return;
       }
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const dynamicImport = new Function("url", "return import(url)");
+      const pdfjs = (await dynamicImport("/pdf.min.mjs")) as typeof import("pdfjs-dist");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const previewUrl = `/api/media?path=${encodeURIComponent(uploaded.data.path)}`;
       const loadingTask = pdfjs.getDocument({ url: previewUrl });

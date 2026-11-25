@@ -8,6 +8,13 @@ export const metadata = { title: "Mengerjakan tes" };
 
 const SECTION_ORDER = { listening: 0, reading: 1 } as const;
 
+const OVERLAY_KINDS = ["choice", "blank", "match", "drop"] as const;
+type OverlayKind = (typeof OVERLAY_KINDS)[number];
+
+function isOverlayKind(value: string | undefined): value is OverlayKind {
+  return value !== undefined && (OVERLAY_KINDS as readonly string[]).includes(value);
+}
+
 export default async function TakePage({
   params,
 }: {
@@ -35,11 +42,11 @@ export default async function TakePage({
   }
 
   const [testResult, questionsResult, answersResult] = await Promise.all([
-    supabase.from("tests").select("title").eq("id", id).maybeSingle(),
+    supabase.from("tests").select("title, student_pdf_path").eq("id", id).maybeSingle(),
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_type, pdf_path, question_options(id, label, text)",
+        "id, section, position, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -50,6 +57,8 @@ export default async function TakePage({
   ]);
 
   if (!testResult.data) notFound();
+  const studentPdfPath = testResult.data.student_pdf_path;
+  const testTitle = testResult.data.title;
 
   const ordered = [...(questionsResult.data ?? [])].sort((a, b) => {
     if (a.section !== b.section) {
@@ -58,11 +67,30 @@ export default async function TakePage({
     return a.position - b.position;
   });
 
-  const questions = await Promise.all(ordered.map(async (question, index) => {
-    const interaction = question.question_type === "multiple_choice"
-      ? null
-      : await supabase.rpc("interactive_question_payload", { p_question_id: question.id });
-    const payload = interaction?.data as { interaction_config?: import("@/lib/supabase/database.types").Json } | null;
+  const questions = ordered.map((question, index) => {
+    const config = (question.interaction_config ?? {}) as {
+      overlays?: { id?: string; kind?: string; pageNumber?: number; label?: string; x?: number; y?: number; width?: number; height?: number }[];
+    };
+    const defaultKind =
+      question.question_type === "multiple_choice"
+        ? "choice"
+        : question.question_type === "matching"
+          ? "match"
+          : question.question_type === "rearrange_sentence"
+            ? "drop"
+            : "blank";
+    const overlays = (config.overlays ?? [])
+      .filter((overlay) => typeof overlay.pageNumber === "number" && typeof overlay.x === "number" && typeof overlay.y === "number")
+      .map((overlay, overlayIndex) => ({
+        id: overlay.id ?? overlay.label ?? `overlay-${overlayIndex}`,
+        kind: isOverlayKind(overlay.kind) ? overlay.kind : defaultKind,
+        pageNumber: Number(overlay.pageNumber),
+        label: overlay.label,
+        x: Number(overlay.x),
+        y: Number(overlay.y),
+        width: Number(overlay.width ?? 0.045),
+        height: Number(overlay.height ?? 0.065),
+      }));
     return {
       id: question.id,
       number: index + 1,
@@ -70,25 +98,15 @@ export default async function TakePage({
       prompt: question.prompt,
       imagePath: question.image_path,
       audioPath: question.audio_path,
-      pdfPath: question.pdf_path,
-      pdfOverlays: question.pdf_path
-        ? ((await supabase.from("pdf_choice_overlays").select("page_number, label, x, y, width, height, option_id").eq("question_id", question.id)).data ?? []).map((overlay) => ({
-            pageNumber: overlay.page_number,
-            label: overlay.label,
-            x: Number(overlay.x),
-            y: Number(overlay.y),
-            width: Number(overlay.width),
-            height: Number(overlay.height),
-            optionId: overlay.option_id,
-          }))
-        : [],
+      pdfPath: overlays.length > 0 ? studentPdfPath : null,
+      pdfOverlays: overlays,
       questionType: question.question_type,
-      interactionConfig: payload?.interaction_config ?? {},
+      interactionConfig: question.interaction_config ?? {},
       options: [...(question.question_options ?? [])]
         .sort((a, b) => a.label.localeCompare(b.label))
         .map((option) => ({ id: option.id, label: option.label, text: option.text })),
     };
-  }));
+  });
 
   const initialAnswers: Record<string, string> = {};
   const initialInteractiveAnswers: Record<string, Record<string, unknown>> = {};
@@ -103,7 +121,7 @@ export default async function TakePage({
     <TakeClient
       attemptId={attempt.data.id}
       testId={id}
-      testTitle={testResult.data.title}
+      testTitle={testTitle}
       expiresAt={attempt.data.expires_at}
       serverNow={serverNow.toISOString()}
       questions={questions}

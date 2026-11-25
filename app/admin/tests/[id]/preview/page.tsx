@@ -5,12 +5,19 @@ import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/link-button";
 import { QuestionView } from "@/components/student/question-view";
+import { PdfQuestionView } from "@/components/student/pdf-question-view";
 import { createClient } from "@/lib/supabase/server";
 import { signMedia } from "@/lib/storage";
 
 export const metadata = { title: "Pratinjau tes" };
 
 const SECTION_ORDER = { listening: 0, reading: 1 } as const;
+const OVERLAY_KINDS = ["choice", "blank", "match", "drop"] as const;
+type OverlayKind = (typeof OVERLAY_KINDS)[number];
+
+function isOverlayKind(value: string | undefined): value is OverlayKind {
+  return value !== undefined && (OVERLAY_KINDS as readonly string[]).includes(value);
+}
 
 export default async function PreviewPage({
   params,
@@ -21,11 +28,15 @@ export default async function PreviewPage({
   const supabase = await createClient();
 
   const [test, questions] = await Promise.all([
-    supabase.from("tests").select("id, title, description").eq("id", id).maybeSingle(),
+    supabase
+      .from("tests")
+      .select("id, title, description, student_pdf_path")
+      .eq("id", id)
+      .maybeSingle(),
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_options(id, label, text)",
+        "id, section, position, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -40,22 +51,69 @@ export default async function PreviewPage({
     return a.position - b.position;
   });
 
+  const studentPdfPath = test.data.student_pdf_path;
+
   const rendered = await Promise.all(
     ordered.map(async (question, index) => {
       const [imageUrl, audioUrl] = await Promise.all([
         signMedia(question.image_path),
         signMedia(question.audio_path),
       ]);
+
+      const config = (question.interaction_config ?? {}) as {
+        overlays?: {
+          id?: string;
+          kind?: string;
+          pageNumber?: number;
+          label?: string;
+          x?: number;
+          y?: number;
+          width?: number;
+          height?: number;
+        }[];
+      };
+      const defaultKind =
+        question.question_type === "multiple_choice"
+          ? "choice"
+          : question.question_type === "matching"
+            ? "match"
+            : question.question_type === "rearrange_sentence"
+              ? "drop"
+              : "blank";
+      const overlays = (config.overlays ?? [])
+        .filter(
+          (overlay) =>
+            typeof overlay.pageNumber === "number" &&
+            typeof overlay.x === "number" &&
+            typeof overlay.y === "number",
+        )
+        .map((overlay, overlayIndex) => ({
+          id: overlay.id ?? overlay.label ?? `overlay-${overlayIndex}`,
+          kind: isOverlayKind(overlay.kind) ? overlay.kind : defaultKind,
+          pageNumber: Number(overlay.pageNumber),
+          label: overlay.label,
+          x: Number(overlay.x),
+          y: Number(overlay.y),
+          width: Number(overlay.width ?? 0.045),
+          height: Number(overlay.height ?? 0.065),
+        }));
+
       return {
         id: question.id,
         number: index + 1,
         section: question.section,
         prompt: question.prompt,
+        imagePath: question.image_path,
+        audioPath: question.audio_path,
         imageUrl,
         audioUrl,
-        options: [...(question.question_options ?? [])].sort((a, b) =>
-          a.label.localeCompare(b.label),
-        ),
+        pdfPath: overlays.length > 0 ? studentPdfPath : null,
+        pdfOverlays: overlays,
+        questionType: question.question_type,
+        interactionConfig: question.interaction_config ?? {},
+        options: [...(question.question_options ?? [])]
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((option) => ({ id: option.id, label: option.label, text: option.text })),
       };
     }),
   );
@@ -89,9 +147,28 @@ export default async function PreviewPage({
             description="Tambahkan soal sebelum melihat pratinjau."
           />
         ) : (
-          rendered.map((question) => (
-            <QuestionView key={question.id} question={question} />
-          ))
+          rendered.map((question) =>
+            question.pdfPath ? (
+              <PdfQuestionView
+                key={question.id}
+                question={question}
+                disabled
+              />
+            ) : (
+              <QuestionView
+                key={question.id}
+                question={{
+                  number: question.number,
+                  section: question.section,
+                  prompt: question.prompt,
+                  imageUrl: question.imageUrl,
+                  audioUrl: question.audioUrl,
+                  options: question.options,
+                }}
+                disabled
+              />
+            ),
+          )
         )}
       </div>
     </>

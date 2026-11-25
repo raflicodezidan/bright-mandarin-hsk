@@ -7,7 +7,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { QuestionView } from "@/components/student/question-view";
-import { PdfPageOverlays, type PdfOverlay } from "@/components/student/pdf-page-overlays";
+import type { PdfOverlay } from "@/components/student/pdf-page-overlays";
+import { PdfQuestionView } from "@/components/student/pdf-question-view";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
 import {
@@ -86,7 +87,6 @@ function InteractiveQuestionView({
     rightItems?: { id: string; text: string }[];
     choices?: { label: string; text: string }[];
     tokens?: { id: string; text: string }[];
-    overlays?: PdfOverlay[];
   };
   const [matching, setMatching] = React.useState<Record<string, string>>(
     (answer.matches as Record<string, string>) ?? {},
@@ -109,16 +109,6 @@ function InteractiveQuestionView({
         <p className="font-mono text-xs text-text-muted tabular">Soal {question.number}</p>
         <p className="text-xs text-text-muted">{question.section === "listening" ? "Listening" : "Reading"}</p>
       </header>
-      {question.pdfPath ? (
-        <PdfPageOverlays
-          src={mediaUrl(question.pdfPath) ?? ""}
-          pageNumber={Number(answer.pdfPage ?? 1)}
-          overlays={config.overlays ?? question.pdfOverlays}
-          selectedLabel={typeof answer.selectedLabel === "string" ? answer.selectedLabel : null}
-          disabled={disabled}
-          onSelect={(label) => onChange({ ...answer, selectedLabel: label })}
-          />
-      ) : null}
       {question.questionType === "hanzi_blank" ? (
         <div className="font-cjk text-question" lang="zh-Hans">
           {question.prompt.split("{{blank}}").map((piece, index, all) => (
@@ -446,7 +436,10 @@ export function TakeClient({
   const navGrid = (
     <div className="grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-6">
       {questions.map((question, index) => {
-        const answered = Boolean(answers[question.id]);
+        const answered =
+          question.questionType === "multiple_choice"
+            ? Boolean(answers[question.id])
+            : Boolean(interactiveAnswers[question.id]);
         const active = index === currentIndex;
         const failed = saveState[question.id] === "error";
         return (
@@ -571,19 +564,30 @@ export function TakeClient({
             <div className="relative select-none">
               <Watermark name={studentName} />
               <div className="relative z-0">
-                  {current.questionType === "multiple_choice" ? <QuestionView
-                  question={{
-                    number: current.number,
-                    section: current.section,
-                    prompt: current.prompt,
-                    imageUrl: mediaUrl(current.imagePath),
-                    audioUrl: mediaUrl(current.audioPath),
-                    options: current.options,
-                  }}
-                  selectedOptionId={answers[current.id] ?? null}
-                  onSelect={chooseOption}
-                  disabled={submitting}
-                  /> : (
+                  {current.pdfPath ? (
+                    <PdfQuestionView
+                      question={current}
+                      answer={interactiveAnswers[current.id] ?? {}}
+                      disabled={submitting}
+                      onChange={answerInteractive}
+                      onChooseOption={chooseOption}
+                      selectedOptionId={answers[current.id] ?? null}
+                    />
+                  ) : current.questionType === "multiple_choice" ? (
+                    <QuestionView
+                      question={{
+                        number: current.number,
+                        section: current.section,
+                        prompt: current.prompt,
+                        imageUrl: mediaUrl(current.imagePath),
+                        audioUrl: mediaUrl(current.audioPath),
+                        options: current.options,
+                      }}
+                      selectedOptionId={answers[current.id] ?? null}
+                      onSelect={chooseOption}
+                      disabled={submitting}
+                    />
+                  ) : (
                     <InteractiveQuestionView
                       question={current}
                       answer={interactiveAnswers[current.id] ?? {}}

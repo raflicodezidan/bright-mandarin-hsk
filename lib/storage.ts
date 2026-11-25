@@ -195,15 +195,21 @@ const cachedStorageFiles = unstable_cache(
     const admin = createAdminClient();
     const files = await collectFiles(admin, "", 0);
 
-    const { data: questions, error: qError } = await admin
-      .from("questions")
-      .select("image_path, audio_path");
-    if (qError) throw qError;
+    const [questionsResult, testsResult] = await Promise.all([
+      admin.from("questions").select("image_path, audio_path"),
+      admin.from("tests").select("pdf_path, student_pdf_path"),
+    ]);
+    if (questionsResult.error) throw questionsResult.error;
+    if (testsResult.error) throw testsResult.error;
 
     const referenced = new Set<string>();
-    for (const row of questions ?? []) {
+    for (const row of questionsResult.data ?? []) {
       if (row.image_path) referenced.add(row.image_path);
       if (row.audio_path) referenced.add(row.audio_path);
+    }
+    for (const row of testsResult.data ?? []) {
+      if (row.pdf_path) referenced.add(row.pdf_path);
+      if (row.student_pdf_path) referenced.add(row.student_pdf_path);
     }
 
     return files
@@ -248,11 +254,18 @@ export async function deleteStorageFile(
       .limit(1);
     if (refError) throw refError;
 
-    if (refs && refs.length > 0) {
+    const { data: testRefs, error: testRefError } = await admin
+      .from("tests")
+      .select("id")
+      .or(`pdf_path.eq.${path},student_pdf_path.eq.${path}`)
+      .limit(1);
+    if (testRefError) throw testRefError;
+
+    if ((refs && refs.length > 0) || (testRefs && testRefs.length > 0)) {
       return {
         ok: false,
         error:
-          "File masih dipakai oleh soal. Ubah atau hapus soal terkait terlebih dahulu.",
+          "File masih dipakai oleh soal atau tes. Ubah atau hapus referensinya terlebih dahulu.",
       };
     }
 

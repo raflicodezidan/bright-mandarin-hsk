@@ -99,5 +99,64 @@ export const questionInteractionUpdateSchema = z.object({
   answerKey: z.record(z.string(), z.unknown()),
 });
 
+// Overlay PDF memakai koordinat relatif (0–1) terhadap halaman asli. Kunci
+// jawaban tidak pernah disimpan di sini; kunci tetap di tabel answer_keys /
+// interactive_answer_keys.
+export const pdfOverlaySchema = z.object({
+  id: z.string().min(1).max(40),
+  kind: z.enum(["choice", "blank", "match", "drop"]),
+  pageNumber: z.number().int().min(1).max(100),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(0.01).max(0.2),
+  height: z.number().min(0.01).max(0.2),
+  label: z.string().max(20).optional(),
+});
+
+export const pdfChoiceQuestionSchema = z.object({
+  testId: z.string().uuid(),
+  prompt: z.string().trim().min(1).max(4000),
+  section: questionSectionSchema,
+  options: z.array(questionOptionSchema).min(2).max(5),
+  overlays: z.array(pdfOverlaySchema).min(2).max(5),
+  correctLabel: z.string().regex(/^[A-E]$/),
+});
+
+const pdfChoiceLabelSchema = z.string().regex(/^[A-Fa-f]$/);
+
+export const pdfBlankQuestionSchema = z.object({
+  testId: z.string().uuid(),
+  section: questionSectionSchema,
+  choices: z.array(z.object({
+    label: pdfChoiceLabelSchema,
+    text: z.string().trim().min(1).max(2000),
+  })).min(2).max(8),
+  blanks: z.array(z.object({
+    id: z.string().min(1).max(40),
+    prompt: z.string().trim().min(1).max(4000),
+    correctLabel: pdfChoiceLabelSchema,
+    overlay: pdfOverlaySchema,
+  })).min(1).max(30),
+});
+
+export const pdfMatchingQuestionSchema = z.object({
+  testId: z.string().uuid(),
+  section: questionSectionSchema,
+  prompt: z.string().trim().min(1).max(4000),
+  leftItems: z.array(matchingItemSchema).min(2).max(10),
+  rightItems: z.array(matchingItemSchema).min(2).max(10),
+  matches: z.record(z.string(), z.string()),
+  overlays: z.array(pdfOverlaySchema).min(2).max(10),
+});
+
+export const pdfRearrangeQuestionSchema = z.object({
+  testId: z.string().uuid(),
+  section: questionSectionSchema,
+  prompt: z.string().trim().min(1).max(4000),
+  tokens: z.array(matchingItemSchema).min(2).max(30),
+  order: z.array(z.string().min(1).max(40)).min(2).max(30),
+  overlays: z.array(pdfOverlaySchema).max(1).default([]),
+});
+
 export type TestInput = z.infer<typeof testSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;

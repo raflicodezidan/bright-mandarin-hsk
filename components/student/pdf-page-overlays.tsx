@@ -1,96 +1,114 @@
 "use client";
 
 import * as React from "react";
+import { Alert } from "@/components/ui/alert";
+import { PdfPageCanvas } from "@/components/pdf/pdf-page-canvas";
+import { usePdfDocument } from "@/components/pdf/use-pdf-document";
 
 export type PdfOverlay = {
+  id: string;
+  kind: "choice" | "blank" | "match" | "drop";
   pageNumber: number;
-  label: string;
+  label?: string;
   x: number;
   y: number;
   width: number;
   height: number;
-  optionId: string;
 };
 
-export function PdfPageOverlays({
+export type PdfOverlaySelection = {
+  selectedIds: string[];
+  assignedLabels?: Record<string, string>;
+  selectedText?: string;
+};
+
+function markerText(overlay: PdfOverlay, selection: PdfOverlaySelection): string {
+  if (overlay.kind === "choice") return overlay.label ?? overlay.id;
+  if (overlay.kind === "match") {
+    return selection.assignedLabels?.[overlay.id] ?? overlay.label ?? overlay.id;
+  }
+  if (overlay.kind === "blank") {
+    return selection.selectedText ?? overlay.label ?? "Isi";
+  }
+  return overlay.label ?? "Susun";
+}
+
+export function PdfQuestionDocument({
   src,
-  pageNumber,
   overlays,
-  selectedLabel,
-  disabled,
+  selection,
+  disabled = false,
   onSelect,
 }: {
   src: string;
-  pageNumber: number;
   overlays: PdfOverlay[];
-  selectedLabel: string | null;
-  disabled: boolean;
-  onSelect: (label: string) => void;
+  selection: PdfOverlaySelection;
+  disabled?: boolean;
+  onSelect: (overlay: PdfOverlay) => void;
 }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
-  const [error, setError] = React.useState<string | null>(null);
+  const { pdf, error, loading } = usePdfDocument(src);
+  const pages = React.useMemo(() => {
+    const unique = [...new Set(overlays.map((overlay) => overlay.pageNumber))];
+    return unique.length > 0 ? unique.sort((a, b) => a - b) : [1];
+  }, [overlays]);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    let loadingTask: { promise: Promise<{ numPages: number; getPage: (page: number) => Promise<{ getViewport: (options: { scale: number }) => { width: number; height: number }; render: (params: { canvas: HTMLCanvasElement; canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number }; transform?: number[] | null }) => { promise: Promise<void> } }> }>; destroy: () => Promise<void> } | null = null;
-    async function renderPdfPage() {
-      try {
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        const task = pdfjs.getDocument({ url: src });
-        loadingTask = task as unknown as NonNullable<typeof loadingTask>;
-        const pdf = await task.promise;
-        if (pageNumber > pdf.numPages) throw new Error("Halaman PDF tidak ditemukan.");
-        const page = await pdf.getPage(pageNumber);
-        const baseViewport = page.getViewport({ scale: 1 });
-        const maxWidth = Math.min(1000, containerRef.current?.clientWidth ?? 900);
-        const scale = maxWidth / baseViewport.width;
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("Browser tidak dapat menampilkan halaman PDF.");
-        const ratio = window.devicePixelRatio || 1;
-        canvas.width = Math.ceil(viewport.width * ratio);
-        canvas.height = Math.ceil(viewport.height * ratio);
-        canvas.style.width = `${viewport.width}px`;
-        canvas.style.height = `${viewport.height}px`;
-        await page.render({ canvas, canvasContext: context, viewport, ...(ratio === 1 ? {} : { transform: [ratio, 0, 0, ratio, 0, 0] }) }).promise;
-        if (cancelled || !containerRef.current) return;
-        containerRef.current.replaceChildren(canvas);
-        setDimensions({ width: viewport.width, height: viewport.height });
-        setError(null);
-        await task.destroy();
-      } catch {
-        if (!cancelled) setError("Halaman PDF tidak dapat dimuat.");
-      }
-    }
-    void renderPdfPage();
-    return () => { cancelled = true; if (loadingTask) void loadingTask.destroy(); };
-  }, [src, pageNumber]);
+  if (error) return <Alert tone="error">{error}</Alert>;
+  if (loading) {
+    return (
+      <div className="flex min-h-72 items-center justify-center border border-border bg-surface-muted">
+        <p className="text-sm text-text-muted">Memuat dokumen PDF…</p>
+      </div>
+    );
+  }
+  if (!pdf) return null;
 
   return (
-    <div className="relative mx-auto max-w-full overflow-auto border border-border bg-white">
-      {error ? <p role="alert" className="p-4 text-sm text-accent">{error}</p> : null}
-      <div ref={containerRef} className="mx-auto w-fit" />
-      {dimensions.width > 0 ? (
-        <div className="pointer-events-none absolute left-1/2 top-0" style={{ width: dimensions.width, height: dimensions.height, transform: "translateX(-50%)" }}>
-          {overlays.filter((overlay) => overlay.pageNumber === pageNumber).map((overlay) => (
-            <button
-              key={`${overlay.pageNumber}-${overlay.label}`}
-              type="button"
-              onClick={() => onSelect(overlay.label)}
-              disabled={disabled}
-              aria-label={`Pilih opsi ${overlay.label}`}
-              aria-pressed={selectedLabel === overlay.label}
-              style={{ left: `${overlay.x * 100}%`, top: `${overlay.y * 100}%`, width: `${overlay.width * 100}%`, height: `${overlay.height * 100}%` }}
-              className={`pointer-events-auto absolute flex items-center justify-center rounded-full border-2 font-mono text-xs font-bold sm:text-sm ${selectedLabel === overlay.label ? "border-success bg-success/80 text-white" : "border-accent bg-white/70 text-accent"}`}
-            >
-              {overlay.label}
-            </button>
-          ))}
+    <div className="flex flex-col gap-4">
+      {pages.map((pageNumber) => (
+        <div key={pageNumber} className="flex flex-col gap-1">
+          {pages.length > 1 ? (
+            <p className="font-mono text-xs text-text-muted">Halaman {pageNumber}</p>
+          ) : null}
+          <PdfPageCanvas pdf={pdf} pageNumber={pageNumber}>
+            {overlays
+              .filter((overlay) => overlay.pageNumber === pageNumber)
+              .map((overlay) => {
+                const selected = selection.selectedIds.includes(overlay.id);
+                const text = markerText(overlay, selection);
+                return (
+                  <button
+                    key={overlay.id}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelect(overlay);
+                    }}
+                    disabled={disabled}
+                    aria-label={`Pilih ${text}`}
+                    aria-pressed={selected}
+                    title={text}
+                    style={{
+                      left: `${overlay.x * 100}%`,
+                      top: `${overlay.y * 100}%`,
+                      width: `${overlay.width * 100}%`,
+                      height: `${overlay.height * 100}%`,
+                    }}
+                    className={[
+                      "absolute z-10 flex items-center justify-center border-2 px-1 font-mono text-xs font-bold shadow-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                      overlay.kind === "choice" ? "rounded-full" : "rounded-[2px]",
+                      selected
+                        ? "border-primary bg-primary text-white"
+                        : "border-primary bg-white/85 text-primary hover:bg-primary-subtle",
+                      disabled ? "cursor-default opacity-80" : "",
+                    ].join(" ")}
+                  >
+                    <span className="max-w-full truncate">{text}</span>
+                  </button>
+                );
+              })}
+          </PdfPageCanvas>
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }

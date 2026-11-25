@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "public/pdf.worker*.mjs",
+    "public/pdf*.mjs",
     // Folder lain di direktori induk yang bukan bagian repo ini.
     "mockup/**",
     "tabungan-nikah/**",
