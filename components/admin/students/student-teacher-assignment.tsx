@@ -65,8 +65,8 @@ export function StudentTeacherAssignment({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-text-muted">
+      <div className="flex flex-col gap-1 items-start">
+        <span className="font-medium text-text">
           {currentTeacherId
             ? teachers.find((teacher) => teacher.id === currentTeacherId)?.fullName ?? "Guru tidak aktif"
             : "Belum dipasangkan"}
@@ -75,14 +75,15 @@ export function StudentTeacherAssignment({
           type="button"
           variant="secondary"
           size="sm"
-          icon={<Link2 size={14} strokeWidth={1.5} aria-hidden="true" />}
+          icon={<Link2 size={13} strokeWidth={1.5} aria-hidden="true" />}
+          className="h-7 text-xs px-2"
           onClick={() => {
             setTeacherId(currentTeacherId ?? "");
             setError(null);
             setOpen(true);
           }}
         >
-          Pasangkan dengan laoshi
+          {currentTeacherId ? "Ubah laoshi" : "Tugaskan laoshi"}
         </Button>
       </div>
 

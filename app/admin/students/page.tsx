@@ -212,16 +212,14 @@ export default async function StudentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">No</TableHead>
-                  <TableHead className="w-[24%] min-w-[150px] text-left">
-                    Nama
-                  </TableHead>
-                  <TableHead className="w-[16%] text-left">Username</TableHead>
-                  <TableHead className="w-[16%] text-left">Guru</TableHead>
-                  <TableHead className="w-[10%]">Status</TableHead>
-                  <TableHead className="w-[12%]">Dibuat</TableHead>
+                  <TableHead className="w-12 text-center">No</TableHead>
+                  <TableHead className="w-[28%] text-left">Nama</TableHead>
+                  <TableHead className="w-[18%] text-left">Username</TableHead>
+                  <TableHead className="w-[24%] text-left">Guru</TableHead>
+                  <TableHead className="w-[12%] text-center">Status</TableHead>
+                  <TableHead className="w-[14%] text-center">Dibuat</TableHead>
                   {isOwner ? (
-                  <TableHead className="min-w-[260px]">Pasangan / aksi</TableHead>
+                    <TableHead className="w-16 text-center">Aksi</TableHead>
                   ) : null}
                 </TableRow>
               </TableHeader>
