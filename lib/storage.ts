@@ -14,7 +14,6 @@ const MAX_DEPTH = 5;
 export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3"] as const;
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
-export const AUDIO_MAX_BYTES = 10 * 1024 * 1024;
 export const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const PDF_TYPES = ["application/pdf"] as const;
 export const PDF_MAX_BYTES = 20 * 1024 * 1024;
@@ -66,9 +65,7 @@ export function validateMediaFile(
     if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number])) {
       return { ok: false, error: "Audio harus berformat mp3." };
     }
-    if (file.size > AUDIO_MAX_BYTES) {
-      return { ok: false, error: "Ukuran audio maksimal 10 MB." };
-    }
+    if (file.size < 1) return { ok: false, error: "File audio kosong atau tidak valid." };
     return { ok: true };
   }
 

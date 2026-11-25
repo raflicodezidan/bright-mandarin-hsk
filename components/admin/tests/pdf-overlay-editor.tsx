@@ -151,6 +151,9 @@ export function PdfOverlayEditor({
   const [rightItems, setRightItems] = React.useState<ItemDraft[]>([
     { id: uid("right"), text: "" },
     { id: uid("right"), text: "" },
+    { id: uid("right"), text: "" },
+    { id: uid("right"), text: "" },
+    { id: uid("right"), text: "" },
   ]);
   const [matches, setMatches] = React.useState<Record<string, string>>({});
   const [matchMarkers, setMatchMarkers] = React.useState<PdfOverlay[]>([]);
@@ -388,8 +391,8 @@ export function PdfOverlayEditor({
       setError("Audio bersama harus berformat MP3.");
       return;
     }
-    if (file.size < 1 || file.size > 10 * 1024 * 1024) {
-      setError("Ukuran audio maksimal 10 MB.");
+    if (file.size < 1) {
+      setError("File audio kosong atau tidak valid.");
       return;
     }
     setError(null);
@@ -736,7 +739,7 @@ export function PdfOverlayEditor({
             <p className="text-sm font-medium text-text">Audio Listening bersama</p>
           </div>
           <p className="text-xs text-text-muted">
-            Opsional. Dipakai pada soal Listening yang tidak punya audio per-soal. Format MP3, maksimal 10 MB.
+            Opsional. Dipakai pada soal Listening yang tidak punya audio per-soal. Format MP3; ukuran tidak dibatasi aplikasi.
           </p>
           <input
             ref={sharedAudioInputRef}
@@ -858,7 +861,7 @@ export function PdfOverlayEditor({
                     <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">Audio tes</span>
                     <span className="text-sm font-medium text-text">Sumber bersama untuk Listening</span>
                   </div>
-                  <span className="text-xs text-text-muted">MP3 · maks. 10 MB</span>
+                  <span className="text-xs text-text-muted">Format MP3</span>
                 </div>
                 {sharedAudioPath ? (
                   <audio controls preload="none" controlsList="nodownload" aria-label="Pratinjau audio Listening bersama" className="w-full">
@@ -1200,6 +1203,9 @@ export function PdfOverlayEditor({
                       <p className="text-xs font-medium">Pilihan (kanan)</p>
                       {rightItems.map((item, index) => (
                         <div key={item.id} className="flex items-center gap-1">
+                          <span className="w-7 shrink-0 font-mono text-xs font-medium text-text-muted">
+                            {String.fromCharCode(65 + index)}.
+                          </span>
                           <Input
                             value={item.text}
                             onChange={(event) =>

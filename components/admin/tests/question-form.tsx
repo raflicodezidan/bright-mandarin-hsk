@@ -236,8 +236,8 @@ export function QuestionForm({
       setError("Ukuran gambar maksimal 2 MB.");
       return;
     }
-    if (audioFile && audioFile.size > 10 * 1024 * 1024) {
-      setError("Ukuran audio maksimal 10 MB.");
+    if (audioFile && audioFile.size < 1) {
+      setError("File audio kosong atau tidak valid.");
       return;
     }
 
@@ -479,9 +479,9 @@ export function QuestionForm({
           hint={
             section === "listening"
               ? sharedListeningAudioUrl
-                ? "Pakai audio bersama tes atau unggah audio khusus soal ini. mp3, maksimal 10 MB."
-                : "Wajib untuk Listening. mp3, maksimal 10 MB."
-              : "Opsional. mp3, maksimal 10 MB."
+                ? "Pakai audio bersama tes atau unggah audio khusus soal ini. Format MP3."
+                : "Wajib untuk Listening. Format MP3."
+              : "Opsional. Format MP3."
           }
           required={section === "listening" && !sharedListeningAudioUrl}
         >

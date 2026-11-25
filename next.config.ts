@@ -2,6 +2,13 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // Audio uploads are bounded by available storage and hosting limits,
+      // not by a fixed application-level size cap.
+      bodySizeLimit: "2gb",
+    },
+  },
   turbopack: {
     root: path.resolve("."),
   },
