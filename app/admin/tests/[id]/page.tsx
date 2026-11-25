@@ -220,6 +220,8 @@ export default async function TestDetailPage({
             pdfUrl={pdfUrl}
             studentPdfUrl={studentPdfUrl}
             disabled={hasAttempts}
+            listeningCount={listening.length}
+            readingCount={reading.length}
           />
         ) : null}
 

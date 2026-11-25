@@ -95,11 +95,15 @@ export function PdfOverlayEditor({
   pdfUrl,
   studentPdfUrl,
   disabled = false,
+  listeningCount = 0,
+  readingCount = 0,
 }: {
   testId: string;
   pdfUrl: string | null;
   studentPdfUrl: string | null;
   disabled?: boolean;
+  listeningCount?: number;
+  readingCount?: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -153,6 +157,9 @@ export function PdfOverlayEditor({
     { id: uid("token"), text: "" },
   ]);
   const [rearrangeMarker, setRearrangeMarker] = React.useState<PdfOverlay | null>(null);
+
+  const nextNumber = section === "listening" ? listeningCount + 1 : readingCount + 1;
+  const sectionLabel = section === "listening" ? "Listening" : "Reading";
 
   const markers = React.useMemo(() => {
     if (mode === "choice") return choiceMarkers;
@@ -766,6 +773,25 @@ export function PdfOverlayEditor({
             </div>
 
             <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
+                    Target Soal
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-semibold text-text">
+                      Nomor {nextNumber}
+                    </span>
+                    <span className="rounded-[2px] bg-primary-subtle px-2 py-0.5 font-mono text-xs font-medium text-primary">
+                      {sectionLabel}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-right text-xs text-text-muted">
+                  Total saat ini: {section === "listening" ? listeningCount : readingCount} soal
+                </span>
+              </div>
+
               <Field label="Tipe soal PDF" htmlFor="pdf-mode" required>
                 <Select
                   id="pdf-mode"
@@ -796,11 +822,16 @@ export function PdfOverlayEditor({
                 </Select>
               </Field>
 
-              <Field label="Prompt / instruksi" htmlFor="pdf-prompt" required>
+              <Field
+                label={`Prompt / Instruksi Soal #${nextNumber}`}
+                htmlFor="pdf-prompt"
+                required
+              >
                 <Textarea
                   id="pdf-prompt"
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
+                  placeholder={`Contoh: ${nextNumber}. 听一句话，选择正确图片。`}
                   maxLength={4000}
                   disabled={disabled || pending}
                   className="min-h-20"
