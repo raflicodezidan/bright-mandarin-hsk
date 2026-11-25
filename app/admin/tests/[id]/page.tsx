@@ -9,6 +9,7 @@ import { TestForm } from "@/components/admin/tests/test-form";
 import { TestStatusActions } from "@/components/admin/tests/test-status-actions";
 import { TestAssignmentsCard } from "@/components/admin/tests/test-assignments-card";
 import { PdfOverlayEditor } from "@/components/admin/tests/pdf-overlay-editor";
+import { PdfQuestionImporter } from "@/components/admin/tests/pdf-question-importer";
 import {
   QuestionList,
   type QuestionListItem,
@@ -215,15 +216,18 @@ export default async function TestDetailPage({
         ) : null}
 
         {canManage ? (
-          <PdfOverlayEditor
-            testId={test.id}
-            pdfUrl={pdfUrl}
-            studentPdfUrl={studentPdfUrl}
-            disabled={hasAttempts}
-            listeningCount={listening.length}
-            readingCount={reading.length}
-            sharedListeningAudioPath={test.listening_audio_path}
-          />
+          <>
+            <PdfQuestionImporter testId={test.id} disabled={hasAttempts} />
+            <PdfOverlayEditor
+              testId={test.id}
+              pdfUrl={pdfUrl}
+              studentPdfUrl={studentPdfUrl}
+              disabled={hasAttempts}
+              listeningCount={listening.length}
+              readingCount={reading.length}
+              sharedListeningAudioPath={test.listening_audio_path}
+            />
+          </>
         ) : null}
 
         <section className="flex flex-col gap-4">
