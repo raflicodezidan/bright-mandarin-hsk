@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { QuestionView } from "@/components/student/question-view";
+import { PdfPageOverlays, type PdfOverlay } from "@/components/student/pdf-page-overlays";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
 import {
@@ -22,6 +23,8 @@ export type TakeQuestion = {
   prompt: string;
   imagePath: string | null;
   audioPath: string | null;
+  pdfPath: string | null;
+  pdfOverlays: PdfOverlay[];
   options: { id: string; label: string; text: string }[];
   questionType: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
   interactionConfig: import("@/lib/supabase/database.types").Json;
@@ -83,6 +86,7 @@ function InteractiveQuestionView({
     rightItems?: { id: string; text: string }[];
     choices?: { label: string; text: string }[];
     tokens?: { id: string; text: string }[];
+    overlays?: PdfOverlay[];
   };
   const [matching, setMatching] = React.useState<Record<string, string>>(
     (answer.matches as Record<string, string>) ?? {},
@@ -105,6 +109,16 @@ function InteractiveQuestionView({
         <p className="font-mono text-xs text-text-muted tabular">Soal {question.number}</p>
         <p className="text-xs text-text-muted">{question.section === "listening" ? "Listening" : "Reading"}</p>
       </header>
+      {question.pdfPath ? (
+        <PdfPageOverlays
+          src={mediaUrl(question.pdfPath) ?? ""}
+          pageNumber={Number(answer.pdfPage ?? 1)}
+          overlays={config.overlays ?? question.pdfOverlays}
+          selectedLabel={typeof answer.selectedLabel === "string" ? answer.selectedLabel : null}
+          disabled={disabled}
+          onSelect={(label) => onChange({ ...answer, selectedLabel: label })}
+          />
+      ) : null}
       {question.questionType === "hanzi_blank" ? (
         <div className="font-cjk text-question" lang="zh-Hans">
           {question.prompt.split("{{blank}}").map((piece, index, all) => (

@@ -9,6 +9,7 @@ import {
   copyMedia,
   removeMedia,
   uploadMedia,
+  uploadQuestionPdf,
   STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
@@ -767,3 +768,93 @@ export async function setTestAssignmentsAction(
 }
 
 export type TestRowData = Tables<"tests">;
+
+export async function uploadTestPdfAction(testId: string, file: File): Promise<TestActionResult<{ path: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsedId = z.string().uuid().safeParse(testId);
+  if (!parsedId.success || !(file instanceof File)) return { ok: false, error: "Data PDF tidak valid." };
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: test } = await supabase.from("tests").select("created_by").eq("id", parsedId.data).maybeSingle();
+  if (!test || !session || (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)) return { ok: false, error: "Akses ditolak." };
+
+  const uploaded = await uploadQuestionPdf(file, parsedId.data);
+  if (!uploaded.ok) return uploaded;
+  const { data: current } = await supabase.from("tests").select("pdf_path").eq("id", parsedId.data).maybeSingle();
+  const { error } = await supabase.from("tests").update({ pdf_path: uploaded.path }).eq("id", parsedId.data);
+  if (error) {
+    await removeMedia([uploaded.path]);
+    return { ok: false, error: "Gagal menautkan PDF ke tes." };
+  }
+  if (current?.pdf_path) await removeMedia([current.pdf_path]);
+  revalidatePath(`/admin/tests/${parsedId.data}`);
+  return { ok: true, data: { path: uploaded.path } };
+}
+
+export async function savePdfOverlayQuestionAction(input: {
+  testId: string;
+  prompt: string;
+  section: "listening" | "reading";
+  pageNumber: number;
+  options: { label: string; text: string }[];
+  overlays: { label: string; x: number; y: number; width: number; height: number }[];
+  correctLabel: string;
+}): Promise<TestActionResult<{ questionId: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = z.object({
+    testId: z.string().uuid(),
+    prompt: z.string().trim().min(1).max(4000),
+    section: z.enum(["listening", "reading"]),
+    pageNumber: z.number().int().min(1).max(100),
+    options: z.array(z.object({ label: z.string().regex(/^[A-E]$/), text: z.string().max(2000) })).min(2).max(5),
+    overlays: z.array(z.object({ label: z.string().regex(/^[A-E]$/), x: z.number().min(0).max(1), y: z.number().min(0).max(1), width: z.number().min(0.01).max(0.2), height: z.number().min(0.01).max(0.2) })).min(2).max(5),
+    correctLabel: z.string().regex(/^[A-E]$/),
+  }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Data soal PDF tidak valid." };
+
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: test } = await supabase.from("tests").select("created_by, pdf_path").eq("id", parsed.data.testId).maybeSingle();
+  if (!test?.pdf_path || !session || (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)) return { ok: false, error: "Tes belum memiliki PDF atau akses ditolak." };
+  const labels = parsed.data.options.map((option) => option.label);
+  if (!labels.includes(parsed.data.correctLabel) || parsed.data.overlays.length !== parsed.data.options.length || parsed.data.overlays.some((overlay) => !labels.includes(overlay.label)) || new Set(parsed.data.overlays.map((overlay) => overlay.label)).size !== labels.length) {
+    return { ok: false, error: "Setiap opsi harus memiliki tepat satu lingkaran dan satu kunci benar." };
+  }
+
+  const { data: questionId, error } = await supabase.rpc("save_question", {
+    p_test_id: parsed.data.testId, p_question_id: null, p_section: parsed.data.section,
+    p_prompt: parsed.data.prompt, p_image_path: null, p_audio_path: null,
+    p_options: parsed.data.options, p_correct_label: parsed.data.correctLabel,
+  });
+  if (error || !questionId) return { ok: false, error: errorMessage(error, "Gagal menyimpan soal PDF.") };
+
+  const optionRows = await supabase.from("question_options").select("id, label").eq("question_id", questionId);
+  const optionIdByLabel = new Map((optionRows.data ?? []).map((row) => [row.label, row.id]));
+  const { data: initialOverlayRows, error: initialOverlayError } = await supabase.from("pdf_choice_overlays").insert(parsed.data.overlays.map((overlay) => ({
+    question_id: questionId,
+    page_number: parsed.data.pageNumber,
+    label: overlay.label,
+    x: overlay.x,
+    y: overlay.y,
+    width: overlay.width,
+    height: overlay.height,
+    option_id: optionIdByLabel.get(overlay.label)!,
+  }))).select("id");
+  void initialOverlayRows;
+  if (initialOverlayError) {
+    await supabase.rpc("delete_question", { p_question_id: questionId });
+    return { ok: false, error: "Gagal menyimpan posisi lingkaran opsi." };
+  }
+  const { error: configError } = await supabase.from("questions").update({
+    interaction_config: { overlays: parsed.data.overlays.map((overlay) => ({ ...overlay, pageNumber: parsed.data.pageNumber })) },
+    pdf_path: test.pdf_path,
+  }).eq("id", questionId);
+  if (configError) {
+    await supabase.rpc("delete_question", { p_question_id: questionId });
+    return { ok: false, error: "Gagal menautkan overlay ke halaman PDF." };
+  }
+  revalidatePath(`/admin/tests/${parsed.data.testId}`);
+  return { ok: true, data: { questionId } };
+}

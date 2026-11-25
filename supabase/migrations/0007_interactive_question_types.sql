@@ -10,7 +10,53 @@ create type public.question_type as enum (
 
 alter table public.questions
   add column question_type public.question_type not null default 'multiple_choice',
-  add column interaction_config jsonb not null default '{}'::jsonb;
+  add column interaction_config jsonb not null default '{}'::jsonb,
+  add column pdf_path text;
+
+create table public.pdf_choice_overlays (
+  id uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.questions(id) on delete cascade,
+  page_number integer not null check (page_number > 0),
+  label char(1) not null check (label in ('A','B','C','D','E')),
+  x numeric not null check (x between 0 and 1),
+  y numeric not null check (y between 0 and 1),
+  width numeric not null default 0.045 check (width between 0.01 and 0.2),
+  height numeric not null default 0.065 check (height between 0.01 and 0.2),
+  option_id uuid not null,
+  created_at timestamptz not null default now(),
+  unique(question_id, page_number, label),
+  foreign key (question_id, option_id)
+    references public.question_options(question_id, id) on delete cascade
+);
+
+alter table public.pdf_choice_overlays enable row level security;
+create policy pdf_choice_overlays_owner_all on public.pdf_choice_overlays
+  for all to authenticated using (public.is_owner()) with check (public.is_owner());
+create policy pdf_choice_overlays_teacher_all on public.pdf_choice_overlays
+  for all to authenticated
+  using (public.is_teacher() and public.teacher_owns_question(question_id))
+  with check (public.is_teacher() and public.teacher_owns_question(question_id));
+create policy pdf_choice_overlays_student_read_active on public.pdf_choice_overlays
+  for select to authenticated
+  using (public.has_active_attempt_for_question(question_id));
+drop policy question_media_teacher_select on storage.objects;
+create policy question_media_teacher_select on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'question-media' and public.is_teacher()
+    and (
+      exists (
+        select 1 from public.questions q
+        where (q.audio_path = storage.objects.name or q.image_path = storage.objects.name)
+          and public.teacher_can_access_question(q.id)
+      )
+      or exists (
+        select 1 from public.tests t
+        where t.pdf_path = storage.objects.name
+          and (public.teacher_can_access_test(t.id) or public.teacher_can_review_test(t.id))
+      )
+    )
+  );
 
 create table public.interactive_answer_keys (
   question_id uuid primary key references public.questions(id) on delete cascade,

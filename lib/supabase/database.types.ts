@@ -134,6 +134,7 @@ export type Database = {
           duration_minutes: number;
           status: Database["public"]["Enums"]["test_status"];
           created_by: string | null;
+          pdf_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -145,6 +146,7 @@ export type Database = {
           duration_minutes: number;
           status?: Database["public"]["Enums"]["test_status"];
           created_by?: string | null;
+          pdf_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -156,6 +158,7 @@ export type Database = {
           duration_minutes?: number;
           status?: Database["public"]["Enums"]["test_status"];
           created_by?: string | null;
+          pdf_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -180,6 +183,7 @@ export type Database = {
           audio_path: string | null;
           question_type: Database["public"]["Enums"]["question_type"];
           interaction_config: Json;
+          pdf_path: string | null;
           created_at: string;
         };
         Insert: {
@@ -192,6 +196,7 @@ export type Database = {
           audio_path?: string | null;
           question_type?: Database["public"]["Enums"]["question_type"];
           interaction_config?: Json;
+          pdf_path?: string | null;
           created_at?: string;
         };
         Update: {
@@ -204,6 +209,7 @@ export type Database = {
           audio_path?: string | null;
           question_type?: Database["public"]["Enums"]["question_type"];
           interaction_config?: Json;
+          pdf_path?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -281,6 +287,43 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      pdf_choice_overlays: {
+        Row: {
+          id: string;
+          question_id: string;
+          page_number: number;
+          label: string;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          option_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          page_number: number;
+          label: string;
+          x: number;
+          y: number;
+          width?: number;
+          height?: number;
+          option_id: string;
+          created_at?: string;
+        };
+        Update: {
+          question_id?: string;
+          page_number?: number;
+          label?: string;
+          x?: number;
+          y?: number;
+          width?: number;
+          height?: number;
+          option_id?: string;
+        };
+        Relationships: [];
       };
       attempts: {
         Row: {

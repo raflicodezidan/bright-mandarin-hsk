@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "question-media";
-// Hanya path yang dibuat server (upload/duplikat): <folder>/<uuid>.<ext>.
+// Hanya path yang dibuat server (upload/duplikat): audio/images UUID, atau PDF
+// yang terikat ke UUID tes.
 // Mencegah path traversal dan manipulasi filter PostgREST lewat parameter.
-const MEDIA_PATH = /^(audio|images)\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$/i;
+const MEDIA_PATH = /^(audio|images)\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$|^pdfs\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.pdf$/i;
 
 export async function GET(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };
@@ -27,13 +28,17 @@ export async function GET(request: NextRequest) {
     .select("test_id")
     .or(`image_path.eq.${path},audio_path.eq.${path}`)
     .maybeSingle();
+  const pdfTestId = path.startsWith("pdfs/") ? path.split("/")[1] : null;
+  const pdfTest = pdfTestId
+    ? await supabase.from("tests").select("id").eq("id", pdfTestId).eq("pdf_path", path).maybeSingle()
+    : null;
 
-  if (!question.data) {
+  if (!question.data && !pdfTest?.data) {
     return NextResponse.json({ error: "Media tidak ditemukan." }, { status: 404, headers: noStore });
   }
 
   const active = await supabase.rpc("has_active_attempt", {
-    p_test_id: question.data.test_id,
+    p_test_id: question.data?.test_id ?? pdfTestId!,
   });
 
   if (session.profile.role !== "student" || active.data !== true) {

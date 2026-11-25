@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { saveImportedQuestionAction } from "@/app/admin/tests/actions";
+import { saveImportedQuestionAction, uploadTestPdfAction } from "@/app/admin/tests/actions";
 import {
   parseReadingPdfLines,
   type ImportedQuestionDraft,
@@ -58,11 +58,17 @@ export function PdfQuestionImporter({
 
     setFileName(file.name);
     try {
+      setNotice("Mengunggah PDF privat untuk editor overlay…");
+      const uploaded = await uploadTestPdfAction(testId, file);
+      if (!uploaded.ok) {
+        setError(uploaded.error);
+        setNotice(null);
+        return;
+      }
       const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-      const loadingTask = pdfjs.getDocument({
-        data: new Uint8Array(await file.arrayBuffer()),
-      });
+      const previewUrl = `/api/media?path=${encodeURIComponent(uploaded.data.path)}`;
+      const loadingTask = pdfjs.getDocument({ url: previewUrl });
       const pdf = await loadingTask.promise;
 
       if (pdf.numPages > MAX_PAGES) {
@@ -105,7 +111,7 @@ export function PdfQuestionImporter({
 
       setDrafts(parsed);
       setNotice(
-        `Ditemukan ${parsed.length} draft pilihan ganda. Tinjau dan pilih kunci setiap soal sebelum menyimpan.${imageCount > 0 ? ` ${imageCount} halaman berupa gambar tidak diekstrak.` : ""} PDF tidak dikirim ke server.`,
+        `PDF disimpan secara privat (${pdf.numPages} halaman). Gunakan editor di bawah untuk menaruh lingkaran opsi pada halaman asli.${parsed.length ? ` Ekstraksi teks juga mendeteksi ${parsed.length} kandidat pilihan ganda.` : " Ekstraksi teks tidak menemukan kandidat otomatis."}${imageCount > 0 ? ` ${imageCount} halaman tampak berupa gambar.` : ""}`,
       );
     } catch {
       setError("PDF gagal dibaca. Coba file lain atau masukkan soal melalui editor.");
@@ -138,11 +144,9 @@ export function PdfQuestionImporter({
   }
 
   return (
-    <Card title="Impor soal dari PDF" description="Ekstrak lokal ke draft Reading. Periksa teks dan kunci sebelum menyimpan.">
+    <Card title="PDF sumber soal" description="Simpan dokumen privat sebagai halaman soal asli, lalu posisikan lingkaran opsi di editor PDF overlay.">
       <div className="flex flex-col gap-4">
-        <Alert tone="warning">
-          PDF diproses di browser dan tidak diunggah. Ekstraksi hanya mengambil teks pilihan ganda; gambar, posisi layout, matching, isian, dan halaman scan tidak dikonversi. Jangan impor halaman kunci jawaban sebagai materi soal. Setiap draft wajib ditinjau dan ditentukan kuncinya secara manual.
-        </Alert>
+        <Alert tone="warning">PDF menjadi dokumen sumber privat. Jangan unggah versi yang menampilkan kunci jawaban kepada murid. Kunci untuk tiap soal overlay dipilih terpisah di editor dan tetap disembunyikan di sisi murid.</Alert>
         {disabled ? (
           <Alert tone="warning">Impor soal baru dinonaktifkan karena tes sudah memiliki pengerjaan.</Alert>
         ) : (
@@ -170,7 +174,7 @@ export function PdfQuestionImporter({
               Pilih PDF
             </Button>
             <span className="text-xs text-text-muted">
-              {fileName || "Maksimal 20 MB dan 100 halaman."}
+              {fileName || "Maksimal 20 MB."}
             </span>
           </div>
         )}

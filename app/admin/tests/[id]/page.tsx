@@ -9,11 +9,13 @@ import { TestForm } from "@/components/admin/tests/test-form";
 import { TestStatusActions } from "@/components/admin/tests/test-status-actions";
 import { TestAssignmentsCard } from "@/components/admin/tests/test-assignments-card";
 import { PdfQuestionImporter } from "@/components/admin/tests/pdf-question-importer";
+import { PdfOverlayEditor } from "@/components/admin/tests/pdf-overlay-editor";
 import {
   QuestionList,
   type QuestionListItem,
 } from "@/components/admin/tests/question-list";
 import { createClient } from "@/lib/supabase/server";
+import { signMedia } from "@/lib/storage";
 import { isOwnerRole, requireStaff } from "@/lib/auth";
 import { TestStatusBadge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/format";
@@ -52,6 +54,7 @@ export default async function TestDetailPage({
   const questions = questionsResult.data ?? [];
   const attemptCount = attemptsResult.count ?? 0;
   const hasAttempts = attemptCount > 0;
+  const pdfUrl = await signMedia(test.pdf_path);
 
   let assignmentTeachers: {
     id: string;
@@ -211,6 +214,13 @@ export default async function TestDetailPage({
 
         {canManage ? (
           <PdfQuestionImporter testId={test.id} disabled={hasAttempts} />
+        ) : null}
+        {canManage ? (
+          pdfUrl ? <PdfOverlayEditor testId={test.id} pdfUrl={pdfUrl} disabled={hasAttempts} /> : (
+            <Card title="Unggah PDF sumber" description="PDF asli menjadi latar soal. Owner/guru menaruh posisi lingkaran opsi manual; kunci dipilih terpisah.">
+              <PdfQuestionImporter testId={test.id} disabled={hasAttempts} />
+            </Card>
+          )
         ) : null}
 
         <section className="flex flex-col gap-4">

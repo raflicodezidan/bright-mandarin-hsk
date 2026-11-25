@@ -16,8 +16,38 @@ export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const AUDIO_MAX_BYTES = 10 * 1024 * 1024;
 export const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+export const PDF_TYPES = ["application/pdf"] as const;
+export const PDF_MAX_BYTES = 20 * 1024 * 1024;
 
 export type MediaKind = "audio" | "images";
+
+export async function uploadQuestionPdf(
+  file: File,
+  testId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  if (!PDF_TYPES.includes(file.type as (typeof PDF_TYPES)[number]) || !file.name.toLowerCase().endsWith(".pdf")) {
+    return { ok: false, error: "Dokumen soal harus berformat PDF." };
+  }
+  if (file.size < 1 || file.size > PDF_MAX_BYTES) {
+    return { ok: false, error: "Ukuran PDF maksimal 20 MB." };
+  }
+  if (!/^[0-9a-f-]{36}$/i.test(testId)) {
+    return { ok: false, error: "Tes tidak valid." };
+  }
+
+  const path = `pdfs/${testId}/${randomUUID()}.pdf`;
+  const admin = createAdminClient();
+  const { error } = await admin.storage
+    .from(STORAGE_BUCKET)
+    .upload(path, Buffer.from(await file.arrayBuffer()), {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+  if (error) return { ok: false, error: "Gagal menyimpan PDF soal." };
+  revalidateTag(STORAGE_USAGE_TAG, "max");
+  revalidateTag(STORAGE_FILES_TAG, "max");
+  return { ok: true, path };
+}
 
 function extensionFor(file: File, kind: MediaKind): string {
   // Ekstensi ditentukan dari MIME yang sudah divalidasi, bukan nama file,

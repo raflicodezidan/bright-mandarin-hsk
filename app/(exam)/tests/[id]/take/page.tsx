@@ -39,7 +39,7 @@ export default async function TakePage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_type, question_options(id, label, text)",
+        "id, section, position, prompt, image_path, audio_path, question_type, pdf_path, question_options(id, label, text)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -70,6 +70,18 @@ export default async function TakePage({
       prompt: question.prompt,
       imagePath: question.image_path,
       audioPath: question.audio_path,
+      pdfPath: question.pdf_path,
+      pdfOverlays: question.pdf_path
+        ? ((await supabase.from("pdf_choice_overlays").select("page_number, label, x, y, width, height, option_id").eq("question_id", question.id)).data ?? []).map((overlay) => ({
+            pageNumber: overlay.page_number,
+            label: overlay.label,
+            x: Number(overlay.x),
+            y: Number(overlay.y),
+            width: Number(overlay.width),
+            height: Number(overlay.height),
+            optionId: overlay.option_id,
+          }))
+        : [],
       questionType: question.question_type,
       interactionConfig: payload?.interaction_config ?? {},
       options: [...(question.question_options ?? [])]
