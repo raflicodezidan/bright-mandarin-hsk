@@ -98,13 +98,14 @@ export default async function PreviewPage({
           height: Number(overlay.height ?? 0.065),
         }));
 
+      const audioPath = question.audio_path ?? null;
       return {
         id: question.id,
         number: index + 1,
         section: question.section,
         prompt: question.prompt,
         imagePath: question.image_path,
-        audioPath: question.audio_path,
+        audioPath,
         imageUrl,
         audioUrl,
         pdfPath: overlays.length > 0 ? studentPdfPath : null,

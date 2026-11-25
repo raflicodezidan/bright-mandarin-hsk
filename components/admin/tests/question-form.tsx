@@ -50,6 +50,7 @@ export function QuestionForm({
   existingAudio,
   imageUrl,
   audioUrl,
+  sharedListeningAudioUrl,
   locked = false,
   textOnly = false,
 }: {
@@ -60,6 +61,7 @@ export function QuestionForm({
   existingAudio: string | null;
   imageUrl: string | null;
   audioUrl: string | null;
+  sharedListeningAudioUrl?: string | null;
   locked?: boolean;
   textOnly?: boolean;
 }) {
@@ -476,12 +478,22 @@ export function QuestionForm({
           htmlFor="question-audio"
           hint={
             section === "listening"
-              ? "Wajib untuk Listening. mp3, maksimal 10 MB."
+              ? sharedListeningAudioUrl
+                ? "Pakai audio bersama tes atau unggah audio khusus soal ini. mp3, maksimal 10 MB."
+                : "Wajib untuk Listening. mp3, maksimal 10 MB."
               : "Opsional. mp3, maksimal 10 MB."
           }
-          required={section === "listening"}
+          required={section === "listening" && !sharedListeningAudioUrl}
         >
           <div className="flex flex-col gap-2">
+            {section === "listening" && !hasAudio && sharedListeningAudioUrl ? (
+              <div className="flex flex-col gap-2 rounded-sm border border-border bg-surface-muted p-3">
+                <p className="text-xs text-text-muted">Audio bersama tes digunakan untuk soal ini.</p>
+                <audio controls preload="none" controlsList="nodownload" className="w-full" aria-label="Audio Listening bersama">
+                  <source src={sharedListeningAudioUrl} type="audio/mpeg" />
+                </audio>
+              </div>
+            ) : null}
             {existingAudio && !removeAudio ? (
               <div className="flex flex-col gap-2 rounded-sm border border-border bg-surface-muted p-3">
                 <p className="text-xs text-text-muted">

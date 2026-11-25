@@ -277,8 +277,12 @@ export async function saveQuestionAction(
   if (removeAudio && existingAudio) replacedPaths.push(existingAudio);
 
   if (parsed.data.section === "listening" && !audioPath) {
-    await removeMedia(uploadedPaths);
-    return { ok: false, error: "Soal Listening wajib memiliki audio." };
+    const { data: testAudio } = await supabase.from("tests").select("listening_audio_path").eq("id", testId).maybeSingle();
+    if (!testAudio?.listening_audio_path) {
+      await removeMedia(uploadedPaths);
+      return { ok: false, error: "Soal Listening wajib memiliki audio khusus atau audio bersama tes." };
+    }
+    audioPath = testAudio.listening_audio_path;
   }
 
   const { data, error } = await supabase.rpc("save_question", {
@@ -634,6 +638,7 @@ export async function deleteTestAction(
     };
   }
 
+  const { data: testMedia } = await supabase.from("tests").select("pdf_path, student_pdf_path, listening_audio_path").eq("id", testId).maybeSingle();
   const { data: questions } = await supabase
     .from("questions")
     .select("image_path, audio_path")
@@ -642,6 +647,7 @@ export async function deleteTestAction(
   const mediaPaths = (questions ?? [])
     .flatMap((question) => [question.image_path, question.audio_path])
     .filter((path): path is string => Boolean(path));
+  const testPaths = [testMedia?.pdf_path, testMedia?.student_pdf_path, testMedia?.listening_audio_path].filter((path): path is string => Boolean(path));
 
   const { data: deleted, error } = await supabase
     .from("tests")
@@ -658,7 +664,7 @@ export async function deleteTestAction(
     return { ok: false, error: "Gagal menghapus tes. Coba lagi." };
   }
 
-  await removeMedia(mediaPaths);
+  await removeMedia([...new Set([...mediaPaths, ...testPaths])]);
 
   revalidatePath("/admin/tests");
   revalidatePath("/admin");
@@ -699,9 +705,15 @@ export async function duplicateTestAction(
   }
 
   const admin = createAdminClient();
+  const { data: sourceTest } = await admin
+    .from("tests")
+    .select("listening_audio_path")
+    .eq("id", testId)
+    .maybeSingle();
+
   const { data: questions, error } = await admin
     .from("questions")
-    .select("image_path, audio_path")
+    .select("image_path, audio_path, interaction_config")
     .eq("test_id", testId);
 
   if (error) return { ok: false, error: "Gagal membaca soal tes." };
@@ -710,7 +722,8 @@ export async function duplicateTestAction(
   const createdCopies: string[] = [];
 
   for (const question of questions ?? []) {
-    for (const path of [question.image_path, question.audio_path]) {
+    const config = question.interaction_config as { pdf?: boolean } | null;
+    for (const path of [question.image_path, config?.pdf ? null : question.audio_path]) {
       if (!path || mediaMap[path]) continue;
       const copy = await copyMedia(path);
       if (!copy) {
@@ -723,6 +736,15 @@ export async function duplicateTestAction(
       mediaMap[path] = copy;
       createdCopies.push(copy);
     }
+  }
+  if (sourceTest?.listening_audio_path && !mediaMap[sourceTest.listening_audio_path]) {
+    const copy = await copyMedia(sourceTest.listening_audio_path);
+    if (!copy) {
+      await removeMedia(createdCopies);
+      return { ok: false, error: "Gagal menyalin audio Listening bersama." };
+    }
+    mediaMap[sourceTest.listening_audio_path] = copy;
+    createdCopies.push(copy);
   }
 
   const supabase = await createClient();
@@ -776,13 +798,73 @@ export type TestRowData = Tables<"tests">;
 
 type PdfKind = "teacher" | "student";
 
+export async function uploadListeningAudioAction(
+  testId: string,
+  file: File,
+): Promise<TestActionResult<{ path: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsedId = z.string().uuid().safeParse(testId);
+  if (!parsedId.success || !(file instanceof File)) {
+    return { ok: false, error: "Data audio tidak valid." };
+  }
+  const managed = await managedTest(parsedId.data);
+  if (!managed.ok) return { ok: false, error: managed.error };
+  const attemptCheck = await managed.supabase.from("attempts").select("id", { count: "exact", head: true }).eq("test_id", parsedId.data);
+  if ((attemptCheck.count ?? 0) > 0) return { ok: false, error: "Audio bersama tidak dapat diubah setelah tes memiliki pengerjaan." };
+
+  const uploaded = await uploadMedia(file, "audio");
+  if (!uploaded.ok) return uploaded;
+  const previous = managed.test.listening_audio_path;
+  const { error } = await managed.supabase
+    .from("tests")
+    .update({ listening_audio_path: uploaded.path })
+    .eq("id", parsedId.data);
+  if (error) {
+    await removeMedia([uploaded.path]);
+    return { ok: false, error: "Gagal menyimpan audio Listening bersama." };
+  }
+  if (previous && previous !== uploaded.path) {
+    const stillUsed = await managed.supabase.from("questions").select("id", { count: "exact", head: true }).eq("audio_path", previous);
+    if ((stillUsed.count ?? 0) === 0) await removeMedia([previous]);
+  }
+  revalidatePath(`/admin/tests/${parsedId.data}`);
+  return { ok: true, data: { path: uploaded.path } };
+}
+
+export async function removeListeningAudioAction(
+  testId: string,
+): Promise<TestActionResult> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsedId = z.string().uuid().safeParse(testId);
+  if (!parsedId.success) return { ok: false, error: "Tes tidak valid." };
+  const managed = await managedTest(parsedId.data);
+  if (!managed.ok) return { ok: false, error: managed.error };
+  const attemptCheck = await managed.supabase.from("attempts").select("id", { count: "exact", head: true }).eq("test_id", parsedId.data);
+  if ((attemptCheck.count ?? 0) > 0) return { ok: false, error: "Audio bersama tidak dapat diubah setelah tes memiliki pengerjaan." };
+
+  const previous = managed.test.listening_audio_path;
+  const { error } = await managed.supabase
+    .from("tests")
+    .update({ listening_audio_path: null })
+    .eq("id", parsedId.data);
+  if (error) return { ok: false, error: "Gagal menghapus audio Listening bersama." };
+  if (previous) {
+    const stillUsed = await managed.supabase.from("questions").select("id", { count: "exact", head: true }).eq("audio_path", previous);
+    if ((stillUsed.count ?? 0) === 0) await removeMedia([previous]);
+  }
+  revalidatePath(`/admin/tests/${parsedId.data}`);
+  return { ok: true, data: undefined };
+}
+
 async function managedTest(testId: string) {
   const session = await getSessionProfile();
   if (!session) return { ok: false as const, error: "Akses ditolak." };
   const supabase = await createClient();
   const { data: test } = await supabase
     .from("tests")
-    .select("id, created_by, pdf_path, student_pdf_path")
+    .select("id, created_by, pdf_path, student_pdf_path, listening_audio_path")
     .eq("id", testId)
     .maybeSingle();
   if (!test) return { ok: false as const, error: "Tes tidak ditemukan." };
@@ -913,13 +995,26 @@ export async function savePdfChoiceQuestionAction(
     return { ok: false, error: "Setiap opsi harus memiliki tepat satu lingkaran dan satu kunci benar." };
   }
 
+  let questionAudioPath: string | null = null;
+  if (parsed.data.section === "listening") {
+    const { data: testAudio } = await managed.supabase
+      .from("tests")
+      .select("listening_audio_path")
+      .eq("id", parsed.data.testId)
+      .maybeSingle();
+    questionAudioPath = testAudio?.listening_audio_path ?? null;
+    if (!questionAudioPath) {
+      return { ok: false, error: "Unggah audio Listening bersama atau buat soal dengan audio per-soal." };
+    }
+  }
+
   const { data: questionId, error } = await managed.supabase.rpc("save_question", {
     p_test_id: parsed.data.testId,
     p_question_id: null,
     p_section: parsed.data.section,
     p_prompt: parsed.data.prompt,
     p_image_path: null,
-    p_audio_path: null,
+    p_audio_path: questionAudioPath,
     p_options: parsed.data.options,
     p_correct_label: parsed.data.correctLabel,
   });
@@ -957,6 +1052,12 @@ export async function savePdfBlankQuestionsAction(
   if (!managed.ok) return { ok: false, error: managed.error };
   const pdf = await ensureTeacherPdf(managed.supabase, parsed.data.testId);
   if (!pdf.ok) return pdf;
+  let listeningAudioPath: string | null = null;
+  if (parsed.data.section === "listening") {
+    const { data: testAudio } = await managed.supabase.from("tests").select("listening_audio_path").eq("id", parsed.data.testId).maybeSingle();
+    listeningAudioPath = testAudio?.listening_audio_path ?? null;
+    if (!listeningAudioPath) return { ok: false, error: "Unggah audio Listening bersama atau buat soal dengan audio per-soal." };
+  }
 
   const labels = new Set(parsed.data.choices.map((choice) => choice.label));
   for (const blank of parsed.data.blanks) {
@@ -990,6 +1091,14 @@ export async function savePdfBlankQuestionsAction(
       }
       return { ok: false, error: errorMessage(error, "Gagal menyimpan isian PDF.") };
     }
+    if (listeningAudioPath) {
+      const { error: audioLinkError } = await managed.supabase.from("questions").update({ audio_path: listeningAudioPath }).eq("id", data);
+      if (audioLinkError) {
+        await managed.supabase.rpc("delete_question", { p_question_id: data });
+        for (const id of created) await managed.supabase.rpc("delete_question", { p_question_id: id });
+        return { ok: false, error: "Gagal memasangkan audio Listening bersama." };
+      }
+    }
     created.push(data);
   }
   revalidatePath(`/admin/tests/${parsed.data.testId}`);
@@ -1009,6 +1118,12 @@ export async function savePdfMatchingQuestionAction(
   if (!managed.ok) return { ok: false, error: managed.error };
   const pdf = await ensureTeacherPdf(managed.supabase, parsed.data.testId);
   if (!pdf.ok) return pdf;
+  let listeningAudioPath: string | null = null;
+  if (parsed.data.section === "listening") {
+    const { data: testAudio } = await managed.supabase.from("tests").select("listening_audio_path").eq("id", parsed.data.testId).maybeSingle();
+    listeningAudioPath = testAudio?.listening_audio_path ?? null;
+    if (!listeningAudioPath) return { ok: false, error: "Unggah audio Listening bersama atau buat soal dengan audio per-soal." };
+  }
 
   const leftIds = new Set(parsed.data.leftItems.map((item) => item.id));
   const overlayIds = parsed.data.overlays.map((overlay) => overlay.id);
@@ -1044,6 +1159,13 @@ export async function savePdfMatchingQuestionAction(
   if (error || !data) {
     return { ok: false, error: errorMessage(error, "Gagal menyimpan matching PDF.") };
   }
+  if (listeningAudioPath) {
+    const { error: audioLinkError } = await managed.supabase.from("questions").update({ audio_path: listeningAudioPath }).eq("id", data);
+    if (audioLinkError) {
+      await managed.supabase.rpc("delete_question", { p_question_id: data });
+      return { ok: false, error: "Gagal memasangkan audio Listening bersama." };
+    }
+  }
   revalidatePath(`/admin/tests/${parsed.data.testId}`);
   return { ok: true, data: { questionId: data } };
 }
@@ -1061,6 +1183,12 @@ export async function savePdfRearrangeQuestionAction(
   if (!managed.ok) return { ok: false, error: managed.error };
   const pdf = await ensureTeacherPdf(managed.supabase, parsed.data.testId);
   if (!pdf.ok) return pdf;
+  let listeningAudioPath: string | null = null;
+  if (parsed.data.section === "listening") {
+    const { data: testAudio } = await managed.supabase.from("tests").select("listening_audio_path").eq("id", parsed.data.testId).maybeSingle();
+    listeningAudioPath = testAudio?.listening_audio_path ?? null;
+    if (!listeningAudioPath) return { ok: false, error: "Unggah audio Listening bersama atau buat soal dengan audio per-soal." };
+  }
 
   const tokenIds = parsed.data.tokens.map((token) => token.id);
   if (
@@ -1089,6 +1217,13 @@ export async function savePdfRearrangeQuestionAction(
   });
   if (error || !data) {
     return { ok: false, error: errorMessage(error, "Gagal menyimpan susun kalimat PDF.") };
+  }
+  if (listeningAudioPath) {
+    const { error: audioLinkError } = await managed.supabase.from("questions").update({ audio_path: listeningAudioPath }).eq("id", data);
+    if (audioLinkError) {
+      await managed.supabase.rpc("delete_question", { p_question_id: data });
+      return { ok: false, error: "Gagal memasangkan audio Listening bersama." };
+    }
   }
   revalidatePath(`/admin/tests/${parsed.data.testId}`);
   return { ok: true, data: { questionId: data } };

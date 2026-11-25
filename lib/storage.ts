@@ -197,7 +197,7 @@ const cachedStorageFiles = unstable_cache(
 
     const [questionsResult, testsResult] = await Promise.all([
       admin.from("questions").select("image_path, audio_path"),
-      admin.from("tests").select("pdf_path, student_pdf_path"),
+      admin.from("tests").select("pdf_path, student_pdf_path, listening_audio_path"),
     ]);
     if (questionsResult.error) throw questionsResult.error;
     if (testsResult.error) throw testsResult.error;
@@ -210,6 +210,7 @@ const cachedStorageFiles = unstable_cache(
     for (const row of testsResult.data ?? []) {
       if (row.pdf_path) referenced.add(row.pdf_path);
       if (row.student_pdf_path) referenced.add(row.student_pdf_path);
+      if (row.listening_audio_path) referenced.add(row.listening_audio_path);
     }
 
     return files
@@ -257,7 +258,7 @@ export async function deleteStorageFile(
     const { data: testRefs, error: testRefError } = await admin
       .from("tests")
       .select("id")
-      .or(`pdf_path.eq.${path},student_pdf_path.eq.${path}`)
+      .or(`pdf_path.eq.${path},student_pdf_path.eq.${path},listening_audio_path.eq.${path}`)
       .limit(1);
     if (testRefError) throw testRefError;
 

@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileUp,
+  Headphones,
   Plus,
   Save,
   Trash2,
@@ -26,6 +27,8 @@ import {
   savePdfMatchingQuestionAction,
   savePdfRearrangeQuestionAction,
   uploadTestPdfAction,
+  uploadListeningAudioAction,
+  removeListeningAudioAction,
 } from "@/app/admin/tests/actions";
 
 type Mode = "choice" | "blank" | "matching" | "rearrange";
@@ -97,6 +100,7 @@ export function PdfOverlayEditor({
   disabled = false,
   listeningCount = 0,
   readingCount = 0,
+  sharedListeningAudioPath = null,
 }: {
   testId: string;
   pdfUrl: string | null;
@@ -104,6 +108,7 @@ export function PdfOverlayEditor({
   disabled?: boolean;
   listeningCount?: number;
   readingCount?: number;
+  sharedListeningAudioPath: string | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -115,6 +120,8 @@ export function PdfOverlayEditor({
   const [studentUrl, setStudentUrl] = React.useState(studentPdfUrl);
   const teacherInputRef = React.useRef<HTMLInputElement>(null);
   const studentInputRef = React.useRef<HTMLInputElement>(null);
+  const sharedAudioInputRef = React.useRef<HTMLInputElement>(null);
+  const [sharedAudioPath, setSharedAudioPath] = React.useState(sharedListeningAudioPath);
 
   const { pdf, error: pdfError, loading: pdfLoading, numPages } = usePdfDocument(teacherUrl);
   const [pageNumber, setPageNumber] = React.useState(1);
@@ -347,7 +354,7 @@ export function PdfOverlayEditor({
         setMatchMarkers([]);
         setRearrangeMarker(null);
         setNotice("PDF guru diunggah. Posisikan lingkaran/titik pada halaman asli.");
-      } else {
+    } else {
         setStudentUrl(url);
         setNotice("PDF murid diunggah. Murid akan melihat PDF ini saat mengerjakan.");
       }
@@ -371,6 +378,43 @@ export function PdfOverlayEditor({
         setStudentUrl(null);
       }
       toast(kind === "teacher" ? "PDF guru dihapus." : "PDF murid dihapus.");
+      router.refresh();
+    });
+  }
+
+  function uploadSharedListeningAudio(file: File | undefined) {
+    if (!file) return;
+    if (!(file.type === "audio/mpeg" || file.type === "audio/mp3") || !file.name.toLowerCase().endsWith(".mp3")) {
+      setError("Audio bersama harus berformat MP3.");
+      return;
+    }
+    if (file.size < 1 || file.size > 10 * 1024 * 1024) {
+      setError("Ukuran audio maksimal 10 MB.");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await uploadListeningAudioAction(testId, file);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setSharedAudioPath(result.data.path);
+      setNotice("Audio Listening bersama berhasil diunggah.");
+      router.refresh();
+    });
+  }
+
+  function removeSharedListeningAudio() {
+    setError(null);
+    startTransition(async () => {
+      const result = await removeListeningAudioAction(testId);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setSharedAudioPath(null);
+      setNotice("Audio Listening bersama dihapus.");
       router.refresh();
     });
   }
@@ -686,6 +730,40 @@ export function PdfOverlayEditor({
           </Alert>
         ) : null}
 
+        <div className="flex flex-col gap-3 border border-border p-3">
+          <div className="flex items-center gap-2">
+            <Headphones size={15} strokeWidth={1.5} aria-hidden="true" />
+            <p className="text-sm font-medium text-text">Audio Listening bersama</p>
+          </div>
+          <p className="text-xs text-text-muted">
+            Opsional. Dipakai pada soal Listening yang tidak punya audio per-soal. Format MP3, maksimal 10 MB.
+          </p>
+          <input
+            ref={sharedAudioInputRef}
+            type="file"
+            accept="audio/mpeg,audio/mp3,.mp3"
+            className="sr-only"
+            disabled={disabled || pending}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              uploadSharedListeningAudio(file);
+            }}
+          />
+          {sharedAudioPath ? (
+            <audio controls preload="none" controlsList="nodownload" aria-label="Pratinjau audio Listening bersama" className="w-full">
+              <source src={mediaUrl(sharedAudioPath) ?? ""} type="audio/mpeg" />
+              Browser Anda tidak mendukung pemutar audio.
+            </audio>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" icon={<FileUp size={14} strokeWidth={1.5} aria-hidden="true" />} loading={pending} disabled={disabled || pending} onClick={() => sharedAudioInputRef.current?.click()}>
+              {sharedAudioPath ? "Ganti audio" : "Unggah audio bersama"}
+            </Button>
+            {sharedAudioPath ? <Button type="button" size="sm" variant="ghost" icon={<Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />} disabled={disabled || pending} onClick={removeSharedListeningAudio}>Hapus</Button> : null}
+          </div>
+        </div>
+
         {!teacherReady ? (
           <p className="text-sm text-text-muted">
             Unggah PDF guru terlebih dahulu untuk mulai menaruh posisi soal.
@@ -773,7 +851,32 @@ export function PdfOverlayEditor({
             </div>
 
             <div className="flex min-w-0 flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+            {section === "listening" ? (
+              <div className="flex flex-col gap-3 border-b border-border pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">Audio tes</span>
+                    <span className="text-sm font-medium text-text">Sumber bersama untuk Listening</span>
+                  </div>
+                  <span className="text-xs text-text-muted">MP3 · maks. 10 MB</span>
+                </div>
+                {sharedAudioPath ? (
+                  <audio controls preload="none" controlsList="nodownload" aria-label="Pratinjau audio Listening bersama" className="w-full">
+                    <source src={mediaUrl(sharedAudioPath) ?? ""} type="audio/mpeg" />
+                    Browser Anda tidak mendukung pemutar audio.
+                  </audio>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <input ref={sharedAudioInputRef} type="file" accept="audio/mpeg,audio/mp3,.mp3" className="sr-only" disabled={disabled || pending} onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; uploadSharedListeningAudio(file); }} />
+                  <Button type="button" size="sm" variant="secondary" icon={<FileUp size={14} strokeWidth={1.5} aria-hidden="true" />} loading={pending} disabled={disabled || pending} onClick={() => sharedAudioInputRef.current?.click()}>
+                    {sharedAudioPath ? "Ganti audio bersama" : "Unggah audio bersama"}
+                  </Button>
+                  {sharedAudioPath ? <Button type="button" size="sm" variant="ghost" icon={<Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />} disabled={disabled || pending} onClick={removeSharedListeningAudio}>Hapus audio</Button> : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                     Target Soal
@@ -840,6 +943,11 @@ export function PdfOverlayEditor({
 
               {mode === "choice" ? (
                 <div className="flex flex-col gap-3">
+                  {section === "listening" ? (
+                    <p className="text-xs text-text-muted">
+                      Soal Listening ini memakai audio bersama. Jika audio soal perlu berbeda, tambahkan soal Listening biasa dan unggah audio khusus pada form soal.
+                    </p>
+                  ) : null}
                   <p className="text-xs text-text-muted">
                     Isi teks opsi, lalu klik posisi lingkaran A–E pada PDF. Klik
                     penanda untuk menghapus dan menaruh ulang.

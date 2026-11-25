@@ -28,7 +28,7 @@ export default async function QuestionPage({
 
   const test = await supabase
     .from("tests")
-    .select("id, title, created_by")
+    .select("id, title, created_by, listening_audio_path")
     .eq("id", id)
     .maybeSingle();
 
@@ -95,9 +95,10 @@ export default async function QuestionPage({
     };
   }
 
-  const [imageUrl, audioUrl] = await Promise.all([
+  const [imageUrl, audioUrl, sharedListeningAudioUrl] = await Promise.all([
     signMedia(existingImage),
     signMedia(existingAudio),
+    signMedia(test.data.listening_audio_path),
   ]);
 
   return (
@@ -120,6 +121,7 @@ export default async function QuestionPage({
         existingAudio={existingAudio}
         imageUrl={imageUrl}
         audioUrl={audioUrl}
+        sharedListeningAudioUrl={sharedListeningAudioUrl}
         locked={locked}
         textOnly={hasAttempts && qid !== "new"}
       />

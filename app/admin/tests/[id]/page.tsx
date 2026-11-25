@@ -222,6 +222,7 @@ export default async function TestDetailPage({
             disabled={hasAttempts}
             listeningCount={listening.length}
             readingCount={reading.length}
+            sharedListeningAudioPath={test.listening_audio_path}
           />
         ) : null}
 

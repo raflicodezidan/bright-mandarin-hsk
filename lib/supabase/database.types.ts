@@ -136,6 +136,7 @@ export type Database = {
           created_by: string | null;
           pdf_path: string | null;
           student_pdf_path: string | null;
+          listening_audio_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -149,6 +150,7 @@ export type Database = {
           created_by?: string | null;
           pdf_path?: string | null;
           student_pdf_path?: string | null;
+          listening_audio_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -162,6 +164,7 @@ export type Database = {
           created_by?: string | null;
           pdf_path?: string | null;
           student_pdf_path?: string | null;
+          listening_audio_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
