@@ -1,21 +1,20 @@
 # PRD — Sistem Tes Online HSK Bright Mandarin
 
-Versi 1.1 · 24 November 2026 · Bahasa dokumen: Indonesia (istilah teknis tetap Inggris)
+Versi 1.0 · 13 November 2026 · Bahasa dokumen: Indonesia (istilah teknis tetap Inggris)
 
 ---
 
 ## 1. Ringkasan
 
-Sistem tes online HSK (Listening & Reading) untuk murid kursus Bright Mandarin. Tes dikerjakan di kursus (diawasi pengajar), bukan di rumah. Owner mengelola guru, murid, tes, dan soal beserta kunci jawaban. Guru mengelola murid yang diampu dan tes miliknya. Murid hanya login, mengerjakan tes dalam batas waktu, lalu submit. **Murid tidak pernah melihat skor.**
+Sistem tes online HSK (Listening & Reading) untuk murid kursus Bright Mandarin. Tes dikerjakan di kursus (diawasi pengajar), bukan di rumah. Admin membuat soal beserta kunci jawaban, membuat akun murid, dan melihat skor. Murid hanya login, mengerjakan tes dalam batas waktu, lalu submit. **Murid tidak pernah melihat skor.**
 
 Sistem ini terpisah dari website profile Bright Mandarin (Next.js + Sanity). Repo, database, dan deployment-nya sendiri.
 
 ### Tujuan
-1. Owner dan guru dapat mengelola soal serta akun murid tanpa developer.
+1. Admin dapat mengelola soal dan akun murid sendiri tanpa developer.
 2. Penilaian otomatis, konsisten, dan tidak bisa dimanipulasi dari sisi murid.
-3. Skor hanya terlihat oleh owner dan guru yang mengampu murid.
-4. Data antar-guru terisolasi; owner dapat memantau kinerja tiap guru.
-5. Biaya operasional Rp0 pada skala puluhan murid dan ratusan soal.
+3. Skor hanya terlihat oleh admin.
+4. Biaya operasional Rp0 pada skala puluhan murid dan ratusan soal.
 
 ### Bukan tujuan (v1)
 Lihat bagian 3 (Out of scope).
@@ -26,23 +25,20 @@ Lihat bagian 3 (Out of scope).
 
 | Role | Siapa | Bisa | Tidak bisa |
 |---|---|---|---|
-| `owner` | Pemilik / admin utama | Semua akses: CRUD guru, murid, tes & soal, penugasan guru, lihat semua hasil, KPI guru, reset pengerjaan, export CSV, kelola penyimpanan | — |
-| `teacher` | Pengajar | CRUD tes & soal miliknya, melihat tes yang ditugaskan, melihat murid yang diampu, melihat hasil muridnya, reset pengerjaan muridnya, export CSV | Melihat guru/murid lain, mengubah akun murid, membuka halaman penyimpanan |
-| `student` | Murid kursus | Login, melihat daftar tes yang tersedia, mengerjakan tes (sekali), submit | Melihat skor, kunci jawaban, soal di luar tes yang sedang dikerjakan, mengunduh soal, mendaftar sendiri |
+| `admin` | Owner / pengajar | CRUD tes & soal, CRUD murid, buka/tutup tes, lihat semua hasil, reset pengerjaan, export CSV | — |
+| `student` | Murid kursus | Login, melihat daftar tes yang dibuka, mengerjakan tes (sekali), submit | Melihat skor, kunci jawaban, soal di luar tes yang sedang dikerjakan, mengunduh soal, mendaftar sendiri |
 
-Role `admin` lama tetap dipertahankan sebagai alias owner agar akun yang sudah ada tidak rusak. Akun owner dibuat lewat script seed; akun guru dibuat owner lewat UI. Tidak ada halaman pendaftaran publik.
+Akun admin dibuat lewat script seed (bukan lewat UI). Tidak ada halaman pendaftaran publik.
 
 ---
 
 ## 3. Scope
 
 ### In scope (v1)
-- Login username + password untuk owner, guru, dan murid
-- Owner: CRUD guru, CRUD murid, penugasan murid ke guru, CRUD tes, penugasan tes ke guru, dashboard KPI guru, export CSV, reset pengerjaan, kelola penyimpanan
-- Guru: CRUD tes dan soal miliknya, melihat tes yang ditugaskan, melihat murid dan hasil muridnya, reset pengerjaan muridnya, export CSV
-- CRUD soal (pilihan ganda 2–5 opsi, audio, gambar), buka/tutup tes, dashboard hasil
+- Login username + password untuk admin dan murid
+- Admin: CRUD murid, CRUD tes, CRUD soal (pilihan ganda 2–5 opsi, audio, gambar), buka/tutup tes, dashboard hasil, export CSV, reset pengerjaan
 - Murid: daftar tes, halaman instruksi, pengerjaan dengan timer, autosave, submit, halaman selesai
-- Skor otomatis di server berdasarkan kunci jawaban yang diatur owner/guru
+- Skor otomatis di server berdasarkan kunci jawaban yang diatur admin
 - Batas waktu per tes, satu kali pengerjaan per murid per tes
 
 ### Out of scope (v1, boleh dibahas sebagai pengembangan tambahan)
@@ -51,8 +47,8 @@ Role `admin` lama tetap dipertahankan sebagai alias owner agar akun yang sudah a
 - Grup soal dengan satu audio/bacaan bersama (tiap soal berdiri sendiri)
 - Acak urutan soal / opsi
 - Batas jumlah putar audio
-- Pembatasan lokasi/IP teknis (pembatasan lokasi = pengawasan pengajar + owner/guru yang membuka/menutup tes)
-- Pendaftaran mandiri, reset password lewat email
+- Pembatasan lokasi/IP teknis (pembatasan lokasi = pengawasan pengajar + admin yang membuka/menutup tes)
+- Pendaftaran mandiri, reset password lewat email, UI manajemen admin lain
 - Dark mode, multi-bahasa, aplikasi mobile native
 
 ---
@@ -63,58 +59,52 @@ Role `admin` lama tetap dipertahankan sebagai alias owner agar akun yang sudah a
 - **BR-2** Satu murid hanya boleh satu pengerjaan per tes (`unique(test_id, student_id)`). Setelah `submitted` atau `expired`, murid tidak bisa membuka soal itu lagi.
 - **BR-3** Refresh halaman, tutup tab, atau koneksi putus **tidak mereset timer**. Murid yang kembali sebelum `expires_at` melanjutkan pengerjaan dengan jawaban yang sudah tersimpan.
 - **BR-4** Saat waktu habis, pengerjaan otomatis disubmit dengan jawaban yang sudah tersimpan. Soal tanpa jawaban dihitung salah.
-- **BR-5** Murid melihat tes berstatus `open` jika tes ditugaskan ke guru aktifnya, dibuat oleh guru aktifnya, atau merupakan tes global owner tanpa penugasan. Owner/guru membuka tes saat murid sudah di kursus dan menutupnya setelah sesi selesai. Murid yang sudah `in_progress` boleh menyelesaikan pengerjaannya walau tes ditutup, sampai `expires_at`.
-- **BR-6** Setelah tes memiliki attempt, owner atau guru pemilik tes boleh mengubah judul, deskripsi, level HSK, durasi, teks soal, teks opsi dengan label/ID tetap, dan kunci jawaban. Perubahan durasi berlaku hanya untuk attempt berikutnya; attempt yang telah dimulai tetap memakai `expires_at` yang sudah ditetapkan. Bagian, urutan, jumlah opsi, serta media terkunci. Jika kunci berubah, skor attempt berstatus `submitted`/`expired` dihitung ulang memakai kunci terbaru. Perubahan teks opsi yang sudah dipilih pada attempt `in_progress` ditolak agar tidak mengubah makna jawaban aktif.
-- **BR-7** Skor = jumlah jawaban benar. Ditampilkan sebagai `benar / total` dan persentase, plus rincian Listening dan Reading. Hanya terlihat oleh owner dan guru yang mengampu murid.
-- **BR-8** Owner boleh me-reset pengerjaan murid mana pun. Guru boleh me-reset pengerjaan murid yang diampu. Wajib konfirmasi.
+- **BR-5** Murid hanya melihat tes berstatus `open`. Admin membuka tes saat murid sudah di kursus dan menutupnya setelah sesi selesai. Murid yang sudah `in_progress` boleh menyelesaikan pengerjaannya walau tes ditutup, sampai `expires_at`.
+- **BR-6** Setelah tes memiliki attempt, admin boleh mengubah judul, deskripsi, level HSK, durasi, teks soal, teks opsi dengan label/ID tetap, dan kunci jawaban. Perubahan durasi berlaku hanya untuk attempt berikutnya; attempt yang telah dimulai tetap memakai `expires_at` yang sudah ditetapkan. Bagian, urutan, jumlah opsi, serta media terkunci. Jika kunci berubah, skor attempt berstatus `submitted`/`expired` dihitung ulang memakai kunci terbaru. Perubahan teks opsi yang sudah dipilih pada attempt `in_progress` ditolak agar tidak mengubah makna jawaban aktif.
+- **BR-7** Skor = jumlah jawaban benar. Ditampilkan sebagai `benar / total` dan persentase, plus rincian Listening dan Reading. Hanya terlihat oleh admin.
+- **BR-8** Admin boleh me-reset pengerjaan seorang murid (menghapus attempt dan jawabannya) agar bisa mengulang, misalnya saat ada kendala teknis. Wajib konfirmasi.
 - **BR-9** Murid nonaktif (`is_active = false`) tidak bisa login. Penghapusan murid yang punya riwayat hasil ditolak; sarankan menonaktifkan.
 - **BR-10** Urutan soal dalam tes: semua `listening` dulu, lalu `reading`, masing-masing berdasarkan `position`.
-- **BR-11** Satu murid hanya memiliki satu guru aktif. Saat murid dipindahkan, relasi lama diakhiri (`ended_at`), bukan dihapus. Riwayat pengerjaan tetap milik murid dan ikut terlihat oleh guru baru.
-- **BR-12** Tes memiliki satu pembuat (`created_by`). Tes dapat ditugaskan ke beberapa guru melalui `test_assignments`. Guru yang ditugaskan dapat melihat tes dan hasil muridnya, tetapi hanya pembuat tes dan owner yang dapat mengubah tes. Tes milik owner tanpa penugasan berlaku sebagai tes global.
 
 ---
 
 ## 5. Kebutuhan fungsional
 
 ### Autentikasi
-- **FR-1** Login dengan username + password. Redirect berdasarkan role (`owner`/`admin` dan `teacher` → `/admin`, `student` → `/tests`).
+- **FR-1** Login dengan username + password. Redirect berdasarkan role (`admin` → `/admin`, `student` → `/tests`).
 - **FR-2** Username dipetakan ke email sintetis `<username>@<STUDENT_EMAIL_DOMAIN>` untuk Supabase Auth. Pengguna tidak pernah melihat email ini.
 - **FR-3** Logout. Sesi memakai cookie (`@supabase/ssr`).
-- **FR-4** Pesan error login netral: "Username atau password salah." Akun nonaktif: "Akun tidak aktif. Hubungi guru atau owner."
+- **FR-4** Pesan error login netral: "Username atau password salah." Akun nonaktif: "Akun tidak aktif. Hubungi admin."
 
-### Owner — Guru dan murid
-- **FR-5** Owner melihat daftar guru dengan KPI: jumlah murid, pengerjaan selesai, rata-rata nilai, jumlah murid dengan nilai di bawah 60, aktivitas terakhir, dan status aktif.
-- **FR-6** Owner menambah guru: nama lengkap, username unik, password awal. Password hanya ditampilkan sekali. Owner dapat mereset password dan menonaktifkan guru.
-- **FR-7** Owner melihat detail guru: KPI, daftar murid yang diampu, daftar tes milik/ditugaskan, serta aksi menugaskan dan melepas murid.
-- **FR-8** Daftar murid (pencarian nama/username, filter status dan guru, pagination 25/halaman). Kolom guru menunjukkan guru aktif atau "Belum ditugaskan".
-- **FR-9** Tambah murid: nama lengkap, username (unik, huruf kecil/angka/titik/garis bawah, 3–30 karakter), password awal (min. 8 karakter; ada tombol "Buat otomatis"). Password hanya ditampilkan sekali setelah dibuat.
-- **FR-10** Edit nama, reset password, aktif/nonaktifkan, hapus (lihat BR-9). Hanya owner yang dapat mengelola akun murid.
+### Admin — Murid
+- **FR-5** Daftar murid (pencarian nama/username, filter aktif/nonaktif, pagination 25/halaman).
+- **FR-6** Tambah murid: nama lengkap, username (unik, huruf kecil/angka/titik/garis bawah, 3–30 karakter), password awal (min. 8 karakter; ada tombol "Buat otomatis"). Password hanya ditampilkan sekali setelah dibuat.
+- **FR-7** Edit nama, reset password, aktif/nonaktifkan, hapus (lihat BR-9).
 
-### Owner & guru — Tes dan soal
-- **FR-11** Daftar tes dengan status `draft` / `open` / `closed` / `archived`, level HSK, durasi, jumlah soal, jumlah pengerjaan, dan pemilik tes. Guru hanya melihat tes miliknya dan tes yang ditugaskan kepadanya.
-- **FR-12** Buat/edit tes: judul, level HSK (1–6), deskripsi/instruksi, durasi (menit). Guru dapat membuat tes baru.
-- **FR-13** Ubah status: Draft → Buka → Tutup → Arsipkan. Tes hanya bisa dibuka jika punya minimal 1 soal dan setiap soal punya kunci jawaban. Hanya owner/pembuat tes yang dapat mengubah status.
-- **FR-14** CRUD soal dalam tes: bagian (`listening`/`reading`), teks soal (mendukung karakter Mandarin), 2–5 opsi (label A–E otomatis), kunci jawaban (tepat satu), gambar opsional, audio opsional (wajib untuk listening), posisi/urutan (ubah dengan tombol naik/turun).
-- **FR-15** Upload audio (mp3, maks 10 MB) dan gambar (jpg/png/webp, maks 2 MB) ke Supabase Storage. Pratinjau audio di form.
-- **FR-16** Duplikat tes (menyalin soal, opsi, kunci, dan media) sebagai draft baru.
-- **FR-17** Pratinjau tes sebagai murid (tanpa membuat attempt, tanpa timer).
-- **FR-18** Owner menugaskan tes ke satu atau beberapa guru. Tes tanpa penugasan milik owner berlaku global; tes milik guru tetap terlihat oleh murid guru tersebut.
+### Admin — Tes & soal
+- **FR-8** Daftar tes dengan status `draft` / `open` / `closed` / `archived`, level HSK, durasi, jumlah soal, jumlah pengerjaan.
+- **FR-9** Buat/edit tes: judul, level HSK (1–6), deskripsi/instruksi, durasi (menit).
+- **FR-10** Ubah status: Draft → Buka → Tutup → Arsipkan. Tes hanya bisa dibuka jika punya minimal 1 soal dan setiap soal punya kunci jawaban.
+- **FR-11** CRUD soal dalam tes: bagian (`listening`/`reading`), teks soal (mendukung karakter Mandarin), 2–5 opsi (label A–E otomatis), kunci jawaban (tepat satu), gambar opsional, audio opsional (wajib untuk listening), posisi/urutan (ubah dengan tombol naik/turun).
+- **FR-12** Upload audio (mp3, maks 10 MB) dan gambar (jpg/png/webp, maks 2 MB) ke Supabase Storage. Pratinjau audio di form.
+- **FR-13** Duplikat tes (menyalin soal, opsi, kunci, dan media) sebagai draft baru.
+- **FR-14** Pratinjau tes sebagai murid (tanpa membuat attempt, tanpa timer).
 
-### Owner & guru — Hasil
-- **FR-19** Dashboard owner: murid aktif, guru aktif, sedang mengerjakan, selesai hari ini, daftar guru dengan murid bernilai di bawah 60, penyimpanan, dan 10 hasil terbaru. Dashboard guru: murid yang diampu, tes tersedia, sedang mengerjakan, selesai hari ini, dan hasil terbaru muridnya.
-- **FR-20** Halaman hasil: tabel pengerjaan dengan filter murid, tes, level, rentang tanggal, status. Owner melihat kolom guru; guru hanya melihat hasil muridnya. Kolom: murid, guru (owner), tes, level, mulai, selesai, durasi terpakai, benar/total, persentase, Listening, Reading, status.
-- **FR-21** Detail pengerjaan: tiap soal dengan jawaban murid, kunci, benar/salah, serta guru pengampu saat ini.
-- **FR-22** Export CSV (UTF-8 dengan BOM agar terbaca Excel) sesuai filter aktif dan akses role.
-- **FR-23** Reset pengerjaan (BR-8).
+### Admin — Hasil
+- **FR-15** Dashboard: murid aktif, tes terbuka, sedang mengerjakan, selesai hari ini, serta 10 hasil terbaru.
+- **FR-16** Halaman hasil: tabel semua pengerjaan dengan filter murid, tes, level, rentang tanggal, status. Kolom: murid, tes, level, mulai, selesai, durasi terpakai, benar/total, persentase, Listening, Reading, status.
+- **FR-17** Detail pengerjaan: tiap soal dengan jawaban murid, kunci, benar/salah.
+- **FR-18** Export CSV (UTF-8 dengan BOM agar terbaca Excel) sesuai filter aktif.
+- **FR-19** Reset pengerjaan (BR-8).
 
 ### Murid
-- **FR-24** Daftar tes yang tersedia, dengan status per tes: "Belum dikerjakan", "Sedang berlangsung" (tombol Lanjutkan), "Selesai". Tanpa skor.
-- **FR-25** Halaman instruksi: judul, level, durasi, jumlah soal per bagian, peringatan "Tes hanya dapat dikerjakan satu kali dan waktu tidak dapat dihentikan", tombol Mulai.
-- **FR-26** Halaman pengerjaan: timer, navigasi nomor soal, satu soal per layar, pilih jawaban, tombol Sebelumnya/Berikutnya, tombol Kumpulkan dengan dialog konfirmasi (menyebut jumlah soal belum terjawab).
-- **FR-27** Autosave tiap kali memilih jawaban. Jika gagal tersimpan, tampilkan indikator "Belum tersimpan" dan coba ulang otomatis.
-- **FR-28** Saat waktu habis, kirim otomatis lalu arahkan ke halaman selesai.
-- **FR-29** Halaman selesai: "Jawaban Anda telah tersimpan. Terima kasih." Tanpa skor.
-- **FR-30** Perlindungan salin soal (best effort, lihat bagian 7): watermark nama murid, tanpa tombol unduh, seleksi teks dimatikan di halaman pengerjaan.
+- **FR-20** Daftar tes yang `open`, dengan status per tes: "Belum dikerjakan", "Sedang berlangsung" (tombol Lanjutkan), "Selesai". Tanpa skor.
+- **FR-21** Halaman instruksi: judul, level, durasi, jumlah soal per bagian, peringatan "Tes hanya dapat dikerjakan satu kali dan waktu tidak dapat dihentikan", tombol Mulai.
+- **FR-22** Halaman pengerjaan: timer, navigasi nomor soal, satu soal per layar, pilih jawaban, tombol Sebelumnya/Berikutnya, tombol Kumpulkan dengan dialog konfirmasi (menyebut jumlah soal belum terjawab).
+- **FR-23** Autosave tiap kali memilih jawaban. Jika gagal tersimpan, tampilkan indikator "Belum tersimpan" dan coba ulang otomatis.
+- **FR-24** Saat waktu habis, kirim otomatis lalu arahkan ke halaman selesai.
+- **FR-25** Halaman selesai: "Jawaban Anda telah tersimpan. Terima kasih." Tanpa skor.
+- **FR-26** Perlindungan salin soal (best effort, lihat bagian 7): watermark nama murid, tanpa tombol unduh, seleksi teks dimatikan di halaman pengerjaan.
 
 ---
 
@@ -124,48 +114,34 @@ Semua `id` bertipe `uuid` (default `gen_random_uuid()`), waktu bertipe `timestam
 
 | Tabel | Kolom penting | Catatan |
 |---|---|---|
-| `profiles` | `id` (pk, = `auth.users.id`), `username` (unique), `full_name`, `role` (`owner`/`admin`/`teacher`/`student`), `is_active`, `created_at` | `admin` dipertahankan sebagai alias owner |
-| `teacher_students` | `id`, `teacher_id` → profiles, `student_id` → profiles, `assigned_by`, `assigned_at`, `ended_at`, `ended_by` | Satu murid hanya punya satu relasi aktif (unique index parsial) |
-| `test_assignments` | `id`, `test_id` → tests, `teacher_id` → profiles, `assigned_by`, `assigned_at` | unique (`test_id`, `teacher_id`); tes dapat ditugaskan ke banyak guru |
+| `profiles` | `id` (pk, = `auth.users.id`), `username` (unique), `full_name`, `role` (`admin`/`student`), `is_active`, `created_at` | Dibuat bersama user Auth |
 | `tests` | `id`, `title`, `level` (1–6), `description`, `duration_minutes`, `status` (`draft`/`open`/`closed`/`archived`), `created_by`, `created_at`, `updated_at` | |
 | `questions` | `id`, `test_id` → tests (cascade), `section` (`listening`/`reading`), `position` int, `prompt` text, `image_path` null, `audio_path` null | unique (`test_id`, `section`, `position`) |
 | `question_options` | `id`, `question_id` → questions (cascade), `label` (`A`–`E`), `text` | unique (`question_id`, `label`) |
-| `answer_keys` | `question_id` (pk, → questions cascade), `correct_option_id` → question_options | **Tabel terpisah**, hanya owner dan guru terkait yang bisa SELECT |
+| `answer_keys` | `question_id` (pk, → questions cascade), `correct_option_id` → question_options | **Tabel terpisah**, hanya admin yang bisa SELECT |
 | `attempts` | `id`, `test_id`, `student_id`, `started_at`, `expires_at`, `submitted_at` null, `status` (`in_progress`/`submitted`/`expired`), `correct_count`, `total_count`, `listening_correct`, `listening_total`, `reading_correct`, `reading_total` | unique (`test_id`, `student_id`); kolom skor null sampai selesai |
 | `attempt_answers` | `attempt_id` → attempts (cascade), `question_id`, `selected_option_id`, `answered_at` | pk (`attempt_id`, `question_id`) |
 
 Storage: bucket privat `question-media` (`audio/…`, `images/…`).
 
 ### Fungsi database (Postgres, `security definer`, `set search_path = public`)
-- `is_owner()` — true jika user aktif berrole owner/admin.
-- `is_teacher()` — true jika user aktif berrole teacher.
-- `is_staff()` — true jika owner atau guru aktif.
-- `is_teacher_of_student(p_student_id)` — true jika guru aktif saat ini mengampu murid tersebut.
-- `teacher_can_access_test(p_test_id)` — true jika owner, pembuat tes, atau guru yang ditugaskan.
-- `teacher_can_review_test(p_test_id)` — true jika guru mengampu murid yang punya pengerjaan pada tes tersebut (riwayat ikut pindah).
-- `teacher_can_access_attempt(p_attempt_id)` — true jika guru mengampu murid pemilik pengerjaan.
-- `get_test_summary(p_test_id)` — judul, level, durasi, jumlah soal per bagian. Hanya untuk tes yang dapat diakses user.
-- `start_attempt(p_test_id)` — membuat attempt (BR-1, BR-2) atau mengembalikan attempt `in_progress` yang ada. Menolak jika tes tidak tersedia, atau murid sudah pernah mengerjakan. Mengembalikan `attempt_id`, `expires_at`, `server_now`.
+- `is_admin()` — true jika user saat ini berrole admin dan aktif.
+- `get_test_summary(p_test_id)` — judul, level, durasi, jumlah soal per bagian. Hanya untuk tes `open`. Tidak membuka isi soal.
+- `start_attempt(p_test_id)` — membuat attempt (BR-1, BR-2) atau mengembalikan attempt `in_progress` yang ada. Menolak jika tes tidak `open`, atau murid sudah pernah mengerjakan. Mengembalikan `attempt_id`, `expires_at`, `server_now`.
 - `save_answer(p_attempt_id, p_question_id, p_option_id)` — upsert jawaban jika attempt milik user, `in_progress`, dan `now() <= expires_at + 5 detik`. Memvalidasi bahwa soal dan opsi milik tes tersebut.
 - `submit_attempt(p_attempt_id)` — mengunci attempt, menghitung skor dari `answer_keys`, mengisi kolom skor, status `submitted`. Idempotent.
-- `finalize_expired_attempts()` — mengubah attempt `in_progress` yang lewat `expires_at` menjadi `expired` dan menghitung skornya dari jawaban tersimpan. Dipanggil saat staff membuka dashboard/hasil dan saat murid membuka daftar tes.
-- `reset_attempt(p_attempt_id)` — owner atau guru yang mengampu murid (BR-8).
-- `assign_student_to_teacher(p_teacher_id, p_student_id)` — owner menugaskan/memindahkan murid ke guru; relasi lama diakhiri.
-- `unassign_student(p_student_id)` — owner melepas murid dari guru aktif.
-- `set_test_assignments(p_test_id, p_teacher_ids)` — owner mengganti daftar guru yang ditugaskan ke tes.
-- `owner_teacher_kpis()` — KPI per guru untuk dashboard owner.
+- `finalize_expired_attempts()` — mengubah attempt `in_progress` yang lewat `expires_at` menjadi `expired` dan menghitung skornya dari jawaban tersimpan. Dipanggil saat admin membuka dashboard/hasil dan saat murid membuka daftar tes.
+- `reset_attempt(p_attempt_id)` — khusus admin (BR-8).
 
 ### Prinsip RLS
 - RLS aktif di **semua** tabel dan bucket.
-- `profiles`: user membaca baris sendiri; owner membaca/menulis semua; guru membaca dirinya dan murid yang diampu. Murid tidak bisa mengubah `role` atau `is_active`.
-- `teacher_students`: owner penuh; guru membaca relasi miliknya; murid membaca relasi miliknya.
-- `test_assignments`: owner penuh; guru membaca penugasan miliknya.
-- `tests`: murid hanya SELECT tes `open` yang dapat diakses (penugasan guru aktif, tes guru aktif, atau tes global owner), ditambah tes yang sudah/sedang dikerjakan. Guru SELECT tes miliknya, tes yang ditugaskan, dan tes yang perlu ditinjau karena hasil muridnya. Owner penuh.
-- `questions`, `question_options`: murid hanya SELECT jika punya attempt `in_progress` untuk tes itu dan `now() <= expires_at`. Guru SELECT untuk tes yang dapat diakses/ditinjau. Owner penuh.
-- `answer_keys`: hanya owner dan guru yang dapat mengakses soal terkait. Tidak ada policy untuk murid.
-- `attempts`: murid memakai view `student_attempt_status` (tanpa kolom skor); Insert/update hanya lewat fungsi. Owner SELECT semua; guru SELECT pengerjaan murid yang diampu.
-- `attempt_answers`: murid tidak INSERT/UPDATE langsung (hanya lewat `save_answer`); murid boleh SELECT jawaban miliknya selama `in_progress` agar bisa melanjutkan. Guru SELECT untuk pengerjaan muridnya.
-- Storage: tulis hanya owner; guru mengunggah lewat Server Action dengan service role. Murid mengakses media hanya lewat signed URL yang dibuat server setelah memverifikasi attempt aktif.
+- `profiles`: user membaca baris sendiri; admin membaca/menulis semua. Murid tidak bisa mengubah `role` atau `is_active`.
+- `tests`: murid hanya SELECT tes `open` (kolom metadata). Admin penuh.
+- `questions`, `question_options`: murid hanya SELECT jika punya attempt `in_progress` untuk tes itu dan `now() <= expires_at`. Admin penuh.
+- `answer_keys`: hanya admin. Tidak ada policy untuk murid.
+- `attempts`: murid SELECT milik sendiri, **tanpa kolom skor** (gunakan view atau column privileges, atau fungsi yang hanya mengembalikan status). Insert/update hanya lewat fungsi. Admin SELECT semua.
+- `attempt_answers`: murid tidak INSERT/UPDATE langsung (hanya lewat `save_answer`); murid boleh SELECT jawaban miliknya selama `in_progress` agar bisa melanjutkan.
+- Storage: tulis hanya admin. Murid mengakses media hanya lewat signed URL yang dibuat server setelah memverifikasi attempt aktif.
 
 ---
 
@@ -198,19 +174,16 @@ Storage: bucket privat `question-media` (`audio/…`, `images/…`).
 | Route | Role | Isi |
 |---|---|---|
 | `/login` | publik | Form login |
-| `/admin` | owner, guru | Dashboard (owner: KPI guru; guru: ringkasan muridnya) |
-| `/admin/teachers` | owner | Daftar guru + KPI |
-| `/admin/teachers/[id]` | owner | Detail guru, murid yang diampu, tes, penugasan |
-| `/admin/students` | owner, guru | Owner: semua murid + filter guru; guru: murid yang diampu |
-| `/admin/tests` | owner, guru | Daftar tes sesuai akses |
-| `/admin/tests/new` | owner, guru | Buat tes |
-| `/admin/tests/[id]` | owner, guru | Edit tes (owner/pembuat) atau lihat saja (guru yang ditugaskan), penugasan guru (owner) |
-| `/admin/tests/[id]/questions/[qid]` | owner, guru | Form soal (`new` untuk soal baru) untuk tes yang dapat dikelola |
-| `/admin/tests/[id]/preview` | owner, guru | Pratinjau sebagai murid |
-| `/admin/results` | owner, guru | Tabel hasil sesuai akses + filter + export |
-| `/admin/results/[attemptId]` | owner, guru | Detail pengerjaan |
-| `/admin/storage` | owner | Penyimpanan media |
-| `/tests` | student | Daftar tes tersedia |
+| `/admin` | admin | Dashboard |
+| `/admin/students` | admin | Daftar + tambah/edit murid |
+| `/admin/tests` | admin | Daftar tes |
+| `/admin/tests/new` | admin | Buat tes |
+| `/admin/tests/[id]` | admin | Edit tes + daftar soal |
+| `/admin/tests/[id]/questions/[qid]` | admin | Form soal (`new` untuk soal baru) |
+| `/admin/tests/[id]/preview` | admin | Pratinjau sebagai murid |
+| `/admin/results` | admin | Tabel hasil + filter + export |
+| `/admin/results/[attemptId]` | admin | Detail pengerjaan |
+| `/tests` | student | Daftar tes terbuka |
 | `/tests/[id]` | student | Instruksi + tombol Mulai |
 | `/tests/[id]/take` | student | Pengerjaan |
 | `/tests/[id]/done` | student | Selesai |
@@ -226,14 +199,11 @@ Storage: bucket privat `question-media` (`audio/…`, `images/…`).
 - **AC-5** Given murid sudah submit, When membuka `/tests/[id]/take` atau memanggil `start_attempt` lagi, Then ditolak dan diarahkan ke halaman selesai.
 - **AC-6** Given waktu habis saat murid masih mengerjakan, Then pengerjaan otomatis terkirim, status `submitted` atau `expired`, soal kosong dihitung salah.
 - **AC-7** Given murid mengubah jam perangkat, Then timer tidak berubah.
-- **AC-8** Given tes `open` ditutup owner/guru, Then murid baru tidak melihatnya, murid `in_progress` tetap bisa menyelesaikan.
-- **AC-9** Given tes sudah punya pengerjaan, When owner/pembuat mengubah kunci jawaban, Then perubahan tersimpan dan skor pengerjaan selesai dihitung ulang dengan kunci terbaru.
-- **AC-10** Given owner/guru export CSV dengan filter tes X, Then file hanya berisi pengerjaan yang boleh diakses dan terbuka benar di Excel (karakter Mandarin tidak rusak).
+- **AC-8** Given tes `open` ditutup admin, Then murid baru tidak melihatnya, murid `in_progress` tetap bisa menyelesaikan.
+- **AC-9** Given tes sudah punya pengerjaan, When admin mencoba mengubah kunci jawaban, Then ditolak.
+- **AC-10** Given admin export CSV dengan filter tes X, Then file hanya berisi pengerjaan tes X dan terbuka benar di Excel (karakter Mandarin tidak rusak).
 - **AC-11** Given murid dinonaktifkan, When mencoba login, Then ditolak dengan pesan akun tidak aktif.
 - **AC-12** Given halaman mana pun untuk murid, Then tidak ada skor, persentase, atau kunci jawaban di UI maupun di respons jaringan.
-- **AC-13** Given guru A login, When membuka daftar murid, tes, atau hasil, Then hanya data murid yang diampu dan tes yang boleh diakses yang tampil.
-- **AC-14** Given murid dipindahkan dari guru A ke guru B, Then guru B melihat riwayat hasil murid tersebut dan guru A tidak lagi melihatnya.
-- **AC-15** Given owner membuka dashboard/guru, Then terlihat jumlah murid dengan nilai di bawah 60 per guru dan tautan ke detail guru.
 
 ---
 
@@ -243,9 +213,8 @@ Storage: bucket privat `question-media` (`audio/…`, `images/…`).
 |---|---|---|
 | Skor | Jumlah benar + persentase, bukan skala resmi HSK | Ya |
 | Audio | Dapat diputar ulang tanpa batas | Ya, HSK asli hanya sekali |
-| Reset pengerjaan | Owner dan guru pengampu boleh me-reset | Ya |
-| Buka/tutup tes | Dikontrol owner/pembuat tes untuk menjaga tes tetap di kursus | Ya |
-| Penugasan guru | Satu murid satu guru aktif; tes dapat ditugaskan ke banyak guru | Ya |
+| Reset pengerjaan | Admin boleh me-reset | Ya |
+| Buka/tutup tes | Dikontrol admin untuk menjaga tes tetap di kursus | Ya |
 | Logo & warna brand | Memakai token placeholder di `DESIGN.md` | Kirim logo + warna |
 | Domain | Subdomain, misal `tes.<domain>` | Ya |
 
@@ -265,3 +234,52 @@ STUDENT_EMAIL_DOMAIN=students.brightmandarin.local   # domain sintetis; ganti ji
 ADMIN_SEED_USERNAME=
 ADMIN_SEED_PASSWORD=
 ```
+
+---
+
+## 13. Pengembangan owner dan status implementasi
+
+Konfirmasi owner tanggal 24 Nov 2026:
+
+- Role `admin` adalah owner dengan akses penuh ke guru, murid, tes, dan hasil.
+- Role `teacher` mengelola tes serta hasil hanya untuk murid yang ditugaskan kepadanya.
+- Setiap murid ditugaskan ke guru; murid hanya melihat tes milik guru tersebut.
+- Editor harus mendukung pilihan ganda, matching, susun ulang kalimat (drag-and-drop), bank kata/isian, benar-salah, dan jawaban pendek dengan pencocokan jawaban yang ditentukan.
+- PDF lokal diekstrak menjadi draft soal/opsi/teks/media, lalu wajib ditinjau guru. Kunci jawaban tidak boleh dikirim ke tampilan murid.
+- Hanzi simplified dan traditional harus tetap Unicode dan diuji pada PDF/font yang masuk.
+- Listening memakai audio yang disediakan owner. Speaking recording (5 menit) dan audio listening (20 menit) memerlukan batas ukuran, format, retensi, serta pemantauan storage.
+- Owner meminta kapasitas target hingga 50 soal speaking dan 50 soal listening; arti target ini perlu ditentukan bersama jumlah murid/rekaman konkuren sebelum menjamin batas kapasitas.
+
+### Implementasi PDF — tahap awal
+
+- Halaman detail tes memiliki importer PDF lokal untuk Reading: PDF diproses di browser dengan PDF.js, ukuran dibatasi 20 MB dan 100 halaman.
+- Extractor saat ini hanya mengambil teks yang dapat diekstrak dan opsi A–E dari bentuk sederhana. Draft perlu ditinjau dan kunci dipilih manual sebelum setiap soal disimpan.
+- PDF tidak diunggah ke server. Halaman scan/OCR, gambar/layout, pembubuhan bulatan overlay, bank kata/isian, matching, serta kunci otomatis belum diimplementasikan pada importer.
+- Importer membuat soal pilihan ganda Reading native yang kompatibel dengan model soal saat ini. Listening media/audio tetap ditambahkan manual.
+- Ekstraksi diuji pada lampiran Reading: menemukan soal 6–10 dengan opsi A/B/C. Soal nomor 1–5 berupa bank kata dan 11–15 matching tidak dibuat draft oleh parser ini.
+
+### Tipe interaktif — implemented locally; requires migration and verification
+
+- Migration `0007_interactive_question_types.sql` menambah tipe `matching`, `hanzi_blank`, dan `rearrange_sentence`, konfigurasi publik per soal, tabel kunci privat, dan payload jawaban.
+- Penilaian berlangsung dalam fungsi database `score_attempt`; jawaban matching harus memasangkan semua item satu-ke-satu, isian memilih opsi Hanzi yang dikonfigurasi, dan rearrange harus memakai tiap potongan tepat satu kali dalam urutan benar.
+- Kunci interaktif tidak dimasukkan ke select data murid. Jawaban terstruktur ditulis melalui RPC `save_interactive_answer`.
+- UI editing, renderer murid, autosave terstruktur, dan detail hasil sudah disambungkan di working tree. Soal interaktif baru dibuat sebagai soal baru; setelah tes punya attempt, struktur/kunci terkunci untuk menjaga hasil lama, hanya teks prompt yang dapat diubah.
+- Matching dan susun ulang dinilai benar hanya jika seluruh pasangan/urutan tepat (1 poin penuh per soal); tidak ada skor parsial.
+- Jangan buka tes berisi soal interaktif sebelum migration 0007 diterapkan dan lulus verifikasi keamanan/penilaian.
+
+### Implementasi bertahap dan batas keamanan
+
+1. Fondasi role, relasi guru-murid/tes, RLS, dan dashboard owner/guru.
+2. Model tipe soal, editor interaktif, penilaian server dan alur hasil.
+3. Perluas importer PDF untuk opsi berbasis gambar/overlay, bank kata, matching, dan pemeriksaan halaman scan.
+4. Impor contoh setelah kunci tervalidasi dan audio Listening disediakan.
+5. Uji isolasi akses antar guru, keamanan kunci jawaban, dan kapasitas storage/bandwidth.
+
+Fitur multi-guru memiliki UI, Server Actions, RLS dan migration `0006_multi_teacher_owner.sql` dalam working tree/commit lokal; tetap wajib review keamanan dan deployment DB yang terkontrol sebelum digunakan production. Data lama belum dipetakan ke guru; owner harus menetapkannya sebelum tes lama dibuka dengan isolasi ketat.
+
+### Lampiran contoh dan blocker publikasi
+
+- Reading PDF memiliki 30 nomor dan beberapa jenis soal; Listening PDF memiliki 15 nomor.
+- File kunci DOCX Reading hanya memuat nomor 1–15, sementara halaman kunci PDF mencakup bagian lanjutan sampai nomor 30 dan teks hasil ekstraksi tidak konsisten untuk nomor 6–10.
+- Listening answer PDF berisi kunci 1–15, tetapi file audio sumber belum dilampirkan.
+- Jangan mengimpor atau mempublikasikan tes contoh dengan kunci yang belum dikonfirmasi. PDF asli mencampur soal dan halaman kunci; halaman kunci hanya untuk admin dan tidak boleh tampil pada sesi murid.

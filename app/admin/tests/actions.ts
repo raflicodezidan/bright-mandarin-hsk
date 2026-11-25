@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { z } from "zod";
 import { getSessionProfile, isOwnerRole, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,6 +12,8 @@ import {
   STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
+  interactiveQuestionSchema,
+  questionInteractionUpdateSchema,
   questionSchema,
   questionTextUpdateSchema,
   testSchema,
@@ -300,6 +303,175 @@ export async function saveQuestionAction(
   return { ok: true, data: { questionId: data } };
 }
 
+export async function saveInteractiveQuestionAction(input: unknown): Promise<TestActionResult<{ questionId: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const envelope = z.object({ testId: z.string().uuid(), questionId: z.string().uuid().nullable().optional() }).safeParse(input);
+  if (!envelope.success) return { ok: false, error: "Tes atau soal tidak valid." };
+  const parsed = interactiveQuestionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Data soal tidak valid." };
+  }
+
+  const session = await getSessionProfile();
+  const supabase = await createClient();
+  const { data: test } = await supabase.from("tests").select("created_by").eq("id", envelope.data.testId).maybeSingle();
+  if (!test) {
+    return { ok: false, error: "Tes tidak ditemukan." };
+  }
+  if (!session || (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah soal." };
+  }
+
+  const { data, error } = await supabase.rpc("save_interactive_question", {
+    p_test_id: envelope.data.testId,
+    p_question_id: envelope.data.questionId ?? null,
+    p_section: parsed.data.section,
+    p_type: parsed.data.type,
+    p_prompt: parsed.data.prompt,
+    p_config: parsed.data.config,
+    p_answer_key: parsed.data.answerKey,
+  });
+  if (error || !data) {
+    return { ok: false, error: errorMessage(error, "Gagal menyimpan soal interaktif.") };
+  }
+  revalidatePath(`/admin/tests/${envelope.data.testId}`);
+  return { ok: true, data: { questionId: data } };
+}
+
+export async function updateInteractiveQuestionAction(input: unknown): Promise<TestActionResult> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = interactiveQuestionSchema.safeParse(input);
+  const envelope = z.object({ testId: z.string().uuid(), questionId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success || !envelope.success) {
+    return { ok: false, error: parsed.success ? "Tes atau soal tidak valid." : parsed.error.issues[0]?.message ?? "Data soal tidak valid." };
+  }
+  const result = await saveInteractiveQuestionAction({ ...parsed.data, testId: envelope.data.testId, questionId: envelope.data.questionId });
+  return result.ok ? { ok: true, data: undefined } : result;
+}
+
+export async function updateInteractiveQuestionTextOnlyAction(input: unknown): Promise<TestActionResult> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = interactiveQuestionSchema.safeParse(input);
+  const envelope = z.object({ testId: z.string().uuid(), questionId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success || !envelope.success) return { ok: false, error: "Data soal tidak valid." };
+
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: test } = await supabase.from("tests").select("created_by").eq("id", envelope.data.testId).maybeSingle();
+  if (!test || !session || (!isOwnerRole(session.profile.role) && test.created_by !== session.profile.id)) return { ok: false, error: "Akses ditolak." };
+  const { data: question } = await supabase.from("questions").select("question_type, interaction_config").eq("id", envelope.data.questionId).eq("test_id", envelope.data.testId).maybeSingle();
+  const { data: key } = await supabase.from("interactive_answer_keys").select("answer").eq("question_id", envelope.data.questionId).maybeSingle();
+  if (!question || !key || question.question_type !== parsed.data.type) return { ok: false, error: "Tipe soal terkunci setelah ada pengerjaan." };
+
+  const original = question.interaction_config as Record<string, unknown>;
+  const next = parsed.data.config as Record<string, unknown>;
+  const originalKey = key.answer as Record<string, unknown>;
+  const nextKey = parsed.data.answerKey as Record<string, unknown>;
+  if (JSON.stringify(original) !== JSON.stringify(next) || JSON.stringify(originalKey) !== JSON.stringify(nextKey)) {
+    return { ok: false, error: "Struktur, opsi, dan kunci jawaban terkunci setelah ada pengerjaan." };
+  }
+  const { error } = await supabase.from("questions").update({ prompt: parsed.data.prompt }).eq("id", envelope.data.questionId).eq("test_id", envelope.data.testId);
+  if (error) return { ok: false, error: "Gagal memperbarui teks soal." };
+  revalidatePath(`/admin/tests/${envelope.data.testId}`);
+  return { ok: true, data: undefined };
+}
+
+export async function saveInteractiveQuestionTextOnlyAction(input: unknown): Promise<TestActionResult> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = interactiveQuestionSchema.safeParse(input);
+  const envelope = z.object({ testId: z.string().uuid(), questionId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success || !envelope.success) return { ok: false, error: "Data soal tidak valid." };
+
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: accessible } = await supabase.from("tests").select("created_by").eq("id", envelope.data.testId).maybeSingle();
+  if (!accessible || !session || (!isOwnerRole(session.profile.role) && accessible.created_by !== session.profile.id)) {
+    return { ok: false, error: "Akses ditolak." };
+  }
+  const { data: existing } = await supabase.from("questions").select("question_type, interaction_config").eq("id", envelope.data.questionId).eq("test_id", envelope.data.testId).maybeSingle();
+  if (!existing || existing.question_type !== parsed.data.type) return { ok: false, error: "Tipe soal terkunci setelah ada pengerjaan." };
+  const config = parsed.data.config as Record<string, unknown>;
+  const immutable = existing.interaction_config as Record<string, unknown>;
+  if (JSON.stringify(config.leftItems) !== JSON.stringify(immutable.leftItems)
+      || JSON.stringify(config.rightItems) !== JSON.stringify(immutable.rightItems)
+      || JSON.stringify(config.choices) !== JSON.stringify(immutable.choices)
+      || JSON.stringify(config.tokens) !== JSON.stringify(immutable.tokens)) {
+    return { ok: false, error: "Struktur dan opsi soal terkunci setelah ada pengerjaan." };
+  }
+
+  const { error } = await supabase.from("questions").update({ prompt: parsed.data.prompt }).eq("id", envelope.data.questionId).eq("test_id", envelope.data.testId);
+  if (error) return { ok: false, error: "Gagal memperbarui teks soal." };
+  revalidatePath(`/admin/tests/${envelope.data.testId}`);
+  return { ok: true, data: undefined };
+}
+
+export async function saveImportedQuestionAction(input: {
+  testId: string;
+  prompt: string;
+  options: { label: string; text: string }[];
+  correctLabel: string;
+}): Promise<TestActionResult<{ questionId: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+
+  const parsedTestId = z.string().uuid().safeParse(input.testId);
+  if (!parsedTestId.success) return { ok: false, error: "Tes tidak valid." };
+
+  const parsed = questionSchema.safeParse({
+    section: "reading",
+    prompt: input.prompt,
+    options: input.options,
+    correctLabel: input.correctLabel,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Data soal tidak valid.",
+    };
+  }
+
+  const supabase = await createClient();
+  const session = await getSessionProfile();
+  const { data: accessibleTest } = await supabase
+    .from("tests")
+    .select("created_by")
+    .eq("id", parsedTestId.data)
+    .maybeSingle();
+
+  if (!accessibleTest) return { ok: false, error: "Tes tidak ditemukan." };
+  if (
+    !session ||
+    (!isOwnerRole(session.profile.role) && accessibleTest.created_by !== session.profile.id)
+  ) {
+    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah soal." };
+  }
+
+  const { data, error } = await supabase.rpc("save_question", {
+    p_test_id: parsedTestId.data,
+    p_question_id: null,
+    p_section: "reading",
+    p_prompt: parsed.data.prompt,
+    p_image_path: null,
+    p_audio_path: null,
+    p_options: parsed.data.options,
+    p_correct_label: parsed.data.correctLabel,
+  });
+
+  if (error || !data) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Gagal menyimpan soal impor. Coba lagi."),
+    };
+  }
+
+  revalidatePath(`/admin/tests/${parsedTestId.data}`);
+  return { ok: true, data: { questionId: data } };
+}
+
 export async function updateQuestionTextAction(
   formData: FormData,
 ): Promise<TestActionResult> {
@@ -345,6 +517,15 @@ export async function updateQuestionTextAction(
   revalidatePath(`/admin/tests/${parsed.data.testId}`);
   revalidatePath(`/admin/tests/${parsed.data.testId}/questions/${parsed.data.questionId}`);
   return { ok: true, data: undefined };
+}
+
+export async function updateQuestionInteractionAction(input: unknown): Promise<TestActionResult> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = questionInteractionUpdateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Data soal tidak valid." };
+  const result = await saveInteractiveQuestionAction({ ...parsed.data, questionId: parsed.data.questionId });
+  return result.ok ? { ok: true, data: undefined } : result;
 }
 
 export async function moveQuestionAction(

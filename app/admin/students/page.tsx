@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { CreateStudentDialog } from "@/components/admin/students/create-student-dialog";
 import { StudentRowActions } from "@/components/admin/students/student-row-actions";
+import { StudentTeacherAssignment } from "@/components/admin/students/student-teacher-assignment";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerRole, requireStaff } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -56,8 +57,9 @@ export default async function StudentsPage({
     isOwner
       ? supabase
           .from("profiles")
-          .select("id, full_name")
-          .eq("role", "teacher")
+          .select("id, full_name, is_active")
+    .eq("role", "teacher")
+    .eq("is_active", true)
           .order("full_name")
       : Promise.resolve({ data: [] }),
     supabase
@@ -219,7 +221,7 @@ export default async function StudentsPage({
                   <TableHead className="w-[10%]">Status</TableHead>
                   <TableHead className="w-[12%]">Dibuat</TableHead>
                   {isOwner ? (
-                    <TableHead className="w-16">Aksi</TableHead>
+                  <TableHead className="min-w-[260px]">Pasangan / aksi</TableHead>
                   ) : null}
                 </TableRow>
               </TableHeader>
@@ -237,10 +239,22 @@ export default async function StudentsPage({
                       <TableCell className="text-left whitespace-nowrap font-mono text-xs tabular">
                         {student.username}
                       </TableCell>
-                      <TableCell className="text-left text-text-muted">
-                        {teacherId
-                          ? teacherNames.get(teacherId) ?? "-"
-                          : "Belum ditugaskan"}
+                      <TableCell className="text-left text-xs">
+                        {isOwner ? (
+                          <StudentTeacherAssignment
+                            studentId={student.id}
+                            studentName={student.full_name}
+                            currentTeacherId={teacherId ?? null}
+              teachers={(teachersResult.data ?? []).map((teacher) => ({
+                id: teacher.id,
+                fullName: teacher.full_name,
+              }))}
+                          />
+                        ) : teacherId ? (
+                          teacherNames.get(teacherId) ?? "-"
+                        ) : (
+                          "Belum ditugaskan"
+                        )}
                       </TableCell>
                       <TableCell>
                         {student.is_active ? (
@@ -253,7 +267,7 @@ export default async function StudentsPage({
                         {formatDate(student.created_at)}
                       </TableCell>
                       {isOwner ? (
-                        <TableCell>
+                        <TableCell className="text-right">
                           <StudentRowActions
                             student={{
                               id: student.id,

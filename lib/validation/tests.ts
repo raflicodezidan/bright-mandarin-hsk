@@ -53,5 +53,51 @@ export const questionTextUpdateSchema = z.object({
   correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
 });
 
+const matchingItemSchema = z.object({
+  id: z.string().min(1).max(40),
+  text: z.string().trim().min(1).max(300),
+});
+
+export const interactiveQuestionSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("matching"),
+    section: questionSectionSchema,
+    prompt: z.string().trim().min(1).max(4000),
+    config: z.object({
+      leftItems: z.array(matchingItemSchema).min(2).max(10),
+      rightItems: z.array(matchingItemSchema).min(2).max(10),
+    }),
+    answerKey: z.object({ matches: z.record(z.string(), z.string()) }),
+  }),
+  z.object({
+    type: z.literal("hanzi_blank"),
+    section: questionSectionSchema,
+    prompt: z.string().trim().min(1).max(4000).refine((value) => value.includes("{{blank}}"), "Teks harus memuat {{blank}}."),
+    config: z.object({
+      choices: z.array(questionOptionSchema).min(2).max(5),
+      blankCount: z.literal(1),
+    }),
+    answerKey: z.object({ correctLabel: z.string().regex(/^[A-E]$/) }),
+  }),
+  z.object({
+    type: z.literal("rearrange_sentence"),
+    section: questionSectionSchema,
+    prompt: z.string().trim().min(1).max(4000),
+    config: z.object({
+      tokens: z.array(matchingItemSchema).min(2).max(30),
+    }),
+    answerKey: z.object({ order: z.array(z.string().min(1).max(40)).min(2).max(30) }),
+  }),
+]);
+
+export const questionInteractionUpdateSchema = z.object({
+  questionId: z.string().uuid(),
+  testId: z.string().uuid(),
+  type: z.enum(["matching", "hanzi_blank", "rearrange_sentence"]),
+  prompt: z.string().trim().min(1).max(4000),
+  config: z.record(z.string(), z.unknown()),
+  answerKey: z.record(z.string(), z.unknown()),
+});
+
 export type TestInput = z.infer<typeof testSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;

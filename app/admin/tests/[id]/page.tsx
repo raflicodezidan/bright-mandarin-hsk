@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { TestForm } from "@/components/admin/tests/test-form";
 import { TestStatusActions } from "@/components/admin/tests/test-status-actions";
 import { TestAssignmentsCard } from "@/components/admin/tests/test-assignments-card";
+import { PdfQuestionImporter } from "@/components/admin/tests/pdf-question-importer";
 import {
   QuestionList,
   type QuestionListItem,
@@ -34,7 +35,7 @@ export default async function TestDetailPage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_options(label), answer_keys(correct_option_id)",
+        "id, section, position, prompt, image_path, audio_path, question_type, question_options(label), answer_keys(correct_option_id), interactive_answer_keys(question_id)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -89,13 +90,13 @@ export default async function TestDetailPage({
         prompt: question.prompt,
         hasAudio: Boolean(question.audio_path),
         hasImage: Boolean(question.image_path),
-        hasKey: Boolean(question.answer_keys),
+        hasKey: Boolean(question.answer_keys || question.interactive_answer_keys),
       }));
   }
 
   const listening = toItems("listening");
   const reading = toItems("reading");
-  const missingKey = questions.filter((question) => !question.answer_keys).length;
+  const missingKey = questions.filter((question) => !question.answer_keys && !question.interactive_answer_keys).length;
 
   return (
     <>
@@ -206,6 +207,10 @@ export default async function TestDetailPage({
               assignedIds={assignedTeacherIds}
             />
           </Card>
+        ) : null}
+
+        {canManage ? (
+          <PdfQuestionImporter testId={test.id} disabled={hasAttempts} />
         ) : null}
 
         <section className="flex flex-col gap-4">

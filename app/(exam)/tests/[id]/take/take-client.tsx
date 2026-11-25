@@ -7,7 +7,10 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { QuestionView } from "@/components/student/question-view";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/input";
 import {
+  saveInteractiveAnswerAction,
   saveAnswerAction,
   submitAttemptAction,
 } from "@/app/(student)/tests/actions";
@@ -20,6 +23,8 @@ export type TakeQuestion = {
   imagePath: string | null;
   audioPath: string | null;
   options: { id: string; label: string; text: string }[];
+  questionType: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
+  interactionConfig: import("@/lib/supabase/database.types").Json;
 };
 
 type SaveState = "saving" | "saved" | "error";
@@ -62,6 +67,89 @@ function Watermark({ name }: { name: string }) {
   );
 }
 
+function InteractiveQuestionView({
+  question,
+  answer,
+  disabled,
+  onChange,
+}: {
+  question: TakeQuestion;
+  answer: Record<string, unknown>;
+  disabled: boolean;
+  onChange: (answer: Record<string, unknown>) => void;
+}) {
+  const config = question.interactionConfig as {
+    leftItems?: { id: string; text: string }[];
+    rightItems?: { id: string; text: string }[];
+    choices?: { label: string; text: string }[];
+    tokens?: { id: string; text: string }[];
+  };
+  const [matching, setMatching] = React.useState<Record<string, string>>(
+    (answer.matches as Record<string, string>) ?? {},
+  );
+  const [order, setOrder] = React.useState<string[]>(() => {
+    const saved = answer.order as string[] | undefined;
+    const initial = saved ?? (config.tokens ?? []).map((token) => token.id);
+    if (saved || question.questionType !== "rearrange_sentence") return initial;
+    const shuffled = [...initial];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  });
+
+  return (
+    <article className="flex flex-col gap-6 rounded-[3px] border border-border bg-surface p-4 sm:p-6">
+      <header className="flex flex-col gap-1">
+        <p className="font-mono text-xs text-text-muted tabular">Soal {question.number}</p>
+        <p className="text-xs text-text-muted">{question.section === "listening" ? "Listening" : "Reading"}</p>
+      </header>
+      {question.questionType === "hanzi_blank" ? (
+        <div className="font-cjk text-question" lang="zh-Hans">
+          {question.prompt.split("{{blank}}").map((piece, index, all) => (
+            <React.Fragment key={index}>
+              {piece}
+              {index < all.length - 1 ? (
+                <Select
+                  aria-label="Pilih Hanzi untuk bagian kosong"
+                  value={String(answer.selectedLabel ?? "")}
+                  onChange={(event) => onChange({ selectedLabel: event.target.value })}
+                  disabled={disabled}
+                  className="mx-2 inline-block w-auto min-w-28 align-middle font-cjk text-base"
+                >
+                  <option value="">Pilih</option>
+                  {(config.choices ?? []).map((choice) => <option key={choice.label} value={choice.label}>{choice.text}</option>)}
+                </Select>
+              ) : null}
+            </React.Fragment>
+          ))}
+        </div>
+      ) : (
+        <p className="font-cjk text-question" lang="zh-Hans">{question.prompt}</p>
+      )}
+
+      {question.questionType === "matching" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-3">{(config.leftItems ?? []).map((item, index) => <Field key={item.id} label={`${index + 1}. ${item.text}`} htmlFor={`matching-${question.id}-${item.id}`}><Select id={`matching-${question.id}-${item.id}`} value={matching[item.id] ?? ""} disabled={disabled} onChange={(event) => { const next = { ...matching, [item.id]: event.target.value }; setMatching(next); onChange({ matches: next }); }}><option value="">Pilih pasangan</option>{(config.rightItems ?? []).map((right) => <option key={right.id} value={right.id} disabled={Object.entries(matching).some(([leftId, rightId]) => leftId !== item.id && rightId === right.id)}>{right.text}</option>)}</Select></Field>)}</div>
+          <div className="flex flex-col gap-3"><p className="text-xs text-text-muted">Pilihan pasangan</p>{(config.rightItems ?? []).map((item, index) => <div key={item.id} className="min-h-10 border border-border bg-surface-muted px-3 py-2 font-cjk text-sm" lang="zh-Hans">{String.fromCharCode(65 + index)}. {item.text}</div>)}</div>
+        </div>
+      ) : null}
+
+      {question.questionType === "rearrange_sentence" ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">Seret potongan untuk menyusun kalimat.</p>
+          {order.map((tokenId, index) => {
+            const token = (config.tokens ?? []).find((item) => item.id === tokenId);
+            if (!token) return null;
+            return <div key={token.id} draggable={!disabled} onDragStart={(event) => event.dataTransfer.setData("text/plain", token.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const fromId = event.dataTransfer.getData("text/plain"); const from = order.indexOf(fromId); if (from < 0) return; const next = [...order]; const [moved] = next.splice(from, 1); next.splice(index, 0, moved); setOrder(next); onChange({ order: next }); }} className="flex min-h-12 items-center gap-3 border border-border-strong bg-surface px-3 py-2"><span className="font-mono text-xs text-text-muted">{index + 1}</span><span className="font-cjk text-option" lang="zh-Hans">{token.text}</span></div>;
+          })}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 export function TakeClient({
   attemptId,
   testId,
@@ -70,6 +158,7 @@ export function TakeClient({
   serverNow,
   questions,
   initialAnswers,
+  initialInteractiveAnswers,
   studentName,
 }: {
   attemptId: string;
@@ -79,6 +168,7 @@ export function TakeClient({
   serverNow: string;
   questions: TakeQuestion[];
   initialAnswers: Record<string, string>;
+  initialInteractiveAnswers: Record<string, Record<string, unknown>>;
   studentName: string;
 }) {
   const router = useRouter();
@@ -99,6 +189,7 @@ export function TakeClient({
   }, [serverNow]);
   const [answers, setAnswers] =
     React.useState<Record<string, string>>(initialAnswers);
+  const [interactiveAnswers, setInteractiveAnswers] = React.useState<Record<string, Record<string, unknown>>>(initialInteractiveAnswers);
   const answersRef = React.useRef(answers);
   const [saveState, setSaveState] = React.useState<Record<string, SaveState>>({});
   // Antrean per soal: pilihan terbaru selalu disimpan setelah pilihan sebelumnya,
@@ -172,7 +263,7 @@ export function TakeClient({
   }, [expiresMs, serverNowMs, submit]);
 
   const unsaved = Object.entries(saveState).some(
-    ([questionId, state]) => state !== "saved" && Boolean(answers[questionId]),
+    ([questionId, state]) => state !== "saved" && Boolean(answers[questionId] || interactiveAnswers[questionId]),
   );
   const unsavedRef = React.useRef(unsaved);
   React.useEffect(() => {
@@ -190,7 +281,7 @@ export function TakeClient({
   }, []);
 
   const current = questions[currentIndex];
-  const answeredCount = questions.filter((question) => answers[question.id]).length;
+  const answeredCount = questions.filter((question) => question.questionType === "multiple_choice" ? Boolean(answers[question.id]) : Boolean(interactiveAnswers[question.id])).length;
   const unanswered = questions.length - answeredCount;
   const remainingMs = Math.max(0, expiresMs - nowMs);
   const lowTime = remainingMs <= 5 * 60 * 1000;
@@ -232,6 +323,28 @@ export function TakeClient({
       .then(() => persist(questionId, optionId));
   }
 
+  async function persistInteractive(questionId: string, answer: Record<string, unknown>) {
+    setSaveState((state) => ({ ...state, [questionId]: "saving" }));
+    let ok = false;
+    try {
+      const result = await saveInteractiveAnswerAction(attemptId, questionId, answer);
+      ok = result.ok;
+    } catch {
+      ok = false;
+    }
+    if (ok) setSaveState((state) => ({ ...state, [questionId]: "saved" }));
+    else setSaveState((state) => ({ ...state, [questionId]: "error" }));
+  }
+
+  function answerInteractive(answer: Record<string, unknown>) {
+    if (!current) return;
+    setInteractiveAnswers((state) => ({ ...state, [current.id]: answer }));
+    const previous = saveQueueRef.current[current.id] ?? Promise.resolve();
+    saveQueueRef.current[current.id] = previous
+      .catch(() => undefined)
+      .then(() => persistInteractive(current.id, answer));
+  }
+
   function chooseOption(optionId: string) {
     if (!current) return;
     setAnswers((state) => ({ ...state, [current.id]: optionId }));
@@ -240,6 +353,14 @@ export function TakeClient({
 
   function retryCurrent() {
     if (!current) return;
+    const interactiveAnswer = interactiveAnswers[current.id];
+    if (interactiveAnswer) {
+      const previous = saveQueueRef.current[current.id] ?? Promise.resolve();
+      saveQueueRef.current[current.id] = previous
+        .catch(() => undefined)
+        .then(() => persistInteractive(current.id, interactiveAnswer));
+      return;
+    }
     const optionId = answers[current.id];
     if (optionId) enqueuePersist(current.id, optionId);
   }
@@ -436,7 +557,7 @@ export function TakeClient({
             <div className="relative select-none">
               <Watermark name={studentName} />
               <div className="relative z-0">
-                <QuestionView
+                  {current.questionType === "multiple_choice" ? <QuestionView
                   question={{
                     number: current.number,
                     section: current.section,
@@ -448,7 +569,14 @@ export function TakeClient({
                   selectedOptionId={answers[current.id] ?? null}
                   onSelect={chooseOption}
                   disabled={submitting}
-                />
+                  /> : (
+                    <InteractiveQuestionView
+                      question={current}
+                      answer={interactiveAnswers[current.id] ?? {}}
+                      disabled={submitting}
+                      onChange={answerInteractive}
+                    />
+                  )}
               </div>
             </div>
 

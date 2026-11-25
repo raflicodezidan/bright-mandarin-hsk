@@ -22,6 +22,7 @@ export type QuestionListItem = {
   hasAudio: boolean;
   hasImage: boolean;
   hasKey: boolean;
+  questionType?: string;
 };
 
 export function QuestionList({
@@ -99,6 +100,11 @@ export function QuestionList({
                   {item.hasImage ? <Badge tone="neutral">Gambar</Badge> : null}
                   {!item.hasKey ? (
                     <Badge tone="accent">Kunci belum diisi</Badge>
+                  ) : null}
+                  {item.questionType && item.questionType !== "multiple_choice" ? (
+                    <span className="ml-2 text-[10px] text-text-muted">
+                      {item.questionType === "matching" ? "Matching" : item.questionType === "hanzi_blank" ? "Isian Hanzi" : "Susun kalimat"}
+                    </span>
                   ) : null}
                 </div>
               </div>

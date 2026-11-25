@@ -178,6 +178,8 @@ export type Database = {
           prompt: string;
           image_path: string | null;
           audio_path: string | null;
+          question_type: Database["public"]["Enums"]["question_type"];
+          interaction_config: Json;
           created_at: string;
         };
         Insert: {
@@ -188,6 +190,8 @@ export type Database = {
           prompt: string;
           image_path?: string | null;
           audio_path?: string | null;
+          question_type?: Database["public"]["Enums"]["question_type"];
+          interaction_config?: Json;
           created_at?: string;
         };
         Update: {
@@ -198,6 +202,8 @@ export type Database = {
           prompt?: string;
           image_path?: string | null;
           audio_path?: string | null;
+          question_type?: Database["public"]["Enums"]["question_type"];
+          interaction_config?: Json;
           created_at?: string;
         };
         Relationships: [
@@ -255,6 +261,20 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "answer_keys_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: true;
+            referencedRelation: "questions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      interactive_answer_keys: {
+        Row: { question_id: string; answer: Json; created_at: string; updated_at: string };
+        Insert: { question_id: string; answer: Json; created_at?: string; updated_at?: string };
+        Update: { question_id?: string; answer?: Json; created_at?: string; updated_at?: string };
+        Relationships: [
+          {
+            foreignKeyName: "interactive_answer_keys_question_id_fkey";
             columns: ["question_id"];
             isOneToOne: true;
             referencedRelation: "questions";
@@ -329,19 +349,22 @@ export type Database = {
         Row: {
           attempt_id: string;
           question_id: string;
-          selected_option_id: string;
+          selected_option_id: string | null;
+          answer_payload: Json;
           answered_at: string;
         };
         Insert: {
           attempt_id: string;
           question_id: string;
-          selected_option_id: string;
+          selected_option_id?: string | null;
+          answer_payload?: Json;
           answered_at?: string;
         };
         Update: {
           attempt_id?: string;
           question_id?: string;
-          selected_option_id?: string;
+          selected_option_id?: string | null;
+          answer_payload?: Json;
           answered_at?: string;
         };
         Relationships: [
@@ -489,6 +512,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      save_interactive_answer: {
+        Args: { p_attempt_id: string; p_question_id: string; p_answer: Json };
+        Returns: undefined;
+      };
       submit_attempt: {
         Args: { p_attempt_id: string };
         Returns: {
@@ -517,6 +544,22 @@ export type Database = {
         };
         Returns: string;
       };
+      save_interactive_question: {
+        Args: {
+          p_test_id: string;
+          p_question_id: string | null;
+          p_section: Database["public"]["Enums"]["question_section"];
+          p_type: Database["public"]["Enums"]["question_type"];
+          p_prompt: string;
+          p_config: Json;
+          p_answer_key: Json;
+        };
+        Returns: string;
+      };
+      interactive_question_payload: {
+        Args: { p_question_id: string };
+        Returns: Json;
+      };
       delete_question: {
         Args: { p_question_id: string };
         Returns: string;
@@ -542,6 +585,7 @@ export type Database = {
     };
     Enums: {
       user_role: "owner" | "admin" | "teacher" | "student";
+      question_type: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
       test_status: "draft" | "open" | "closed" | "archived";
       question_section: "listening" | "reading";
       attempt_status: "in_progress" | "submitted" | "expired";

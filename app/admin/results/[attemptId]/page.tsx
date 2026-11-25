@@ -67,20 +67,20 @@ export default async function ResultDetailPage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, question_options(id, label, text), answer_keys(correct_option_id)",
+        "id, section, position, prompt, question_type, question_options(id, label, text), answer_keys(correct_option_id), interactive_answer_keys(answer)",
       )
       .eq("test_id", attempt.data.test_id)
       .order("position", { ascending: true }),
     supabase
       .from("attempt_answers")
-      .select("question_id, selected_option_id")
+      .select("question_id, selected_option_id, answer_payload")
       .eq("attempt_id", attemptId),
   ]);
 
   const answers = new Map(
     (answersResult.data ?? []).map((answer) => [
       answer.question_id,
-      answer.selected_option_id,
+      { selectedOptionId: answer.selected_option_id, payload: answer.answer_payload as Record<string, unknown> },
     ]),
   );
 
@@ -210,7 +210,8 @@ export default async function ResultDetailPage({
             </TableHeader>
             <TableBody>
               {questions.map((question, index) => {
-                const selectedId = answers.get(question.id);
+                const answer = answers.get(question.id);
+                const selectedId = answer?.selectedOptionId ?? null;
                 const options = question.question_options ?? [];
                 const selected = options.find(
                   (option) => option.id === selectedId,
@@ -219,9 +220,22 @@ export default async function ResultDetailPage({
                 const correct = options.find(
                   (option) => option.id === correctId,
                 );
-                const isCorrect = Boolean(
-                  selectedId && correctId && selectedId === correctId,
-                );
+                const isInteractive = question.question_type !== "multiple_choice";
+                const key = question.interactive_answer_keys?.answer as Record<string, unknown> | undefined;
+                const matchesPayload = (left: unknown, right: unknown) => {
+                  if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) return false;
+                  const a = left as Record<string, unknown>;
+                  const b = right as Record<string, unknown>;
+                  const keys = Object.keys(b);
+                  return keys.length > 0 && keys.length === Object.keys(a).length && keys.every((item) => a[item] === b[item]);
+                };
+                const isCorrect = question.question_type === "matching"
+                  ? matchesPayload(answer?.payload?.matches, key?.matches)
+                  : question.question_type === "hanzi_blank"
+                    ? answer?.payload?.selectedLabel === key?.correctLabel
+                    : question.question_type === "rearrange_sentence"
+                      ? JSON.stringify(answer?.payload?.order ?? []) === JSON.stringify(key?.order ?? [])
+                      : Boolean(selectedId && correctId && selectedId === correctId);
 
                 return (
                   <TableRow key={question.id}>
@@ -235,7 +249,9 @@ export default async function ResultDetailPage({
                       </p>
                     </TableCell>
                     <TableCell>
-                      {selected ? (
+                      {isInteractive ? (
+                        <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">{JSON.stringify(answer?.payload ?? {})}</span>
+                      ) : selected ? (
                         <span className="text-sm">
                           <span className="font-mono">{selected.label}.</span>{" "}
                           <span className="font-cjk" lang="zh-Hans">
@@ -247,7 +263,9 @@ export default async function ResultDetailPage({
                       )}
                     </TableCell>
                     <TableCell>
-                      {correct ? (
+                      {isInteractive ? (
+                        <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">{JSON.stringify(key ?? {})}</span>
+                      ) : correct ? (
                         <span className="text-sm">
                           <span className="font-mono">{correct.label}.</span>{" "}
                           <span className="font-cjk" lang="zh-Hans">
@@ -259,7 +277,7 @@ export default async function ResultDetailPage({
                       )}
                     </TableCell>
                     <TableCell>
-                      {!selected ? (
+                      {!selected && !answer?.payload ? (
                         <Badge tone="muted">Tidak dijawab</Badge>
                       ) : isCorrect ? (
                         <Badge tone="success">Benar</Badge>

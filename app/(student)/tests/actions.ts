@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { databaseErrorMessage } from "@/lib/errors";
+import type { Json } from "@/lib/supabase/database.types";
 
 export type StudentActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -82,6 +83,31 @@ export async function saveAnswerAction(
     };
   }
 
+  return { ok: true, data: undefined };
+}
+
+export async function saveInteractiveAnswerAction(
+  attemptId: string,
+  questionId: string,
+  answer: unknown,
+): Promise<StudentActionResult> {
+  const denied = await guardStudent();
+  if (denied) return denied;
+  if (!uuid.safeParse(attemptId).success || !uuid.safeParse(questionId).success) {
+    return { ok: false, error: "Data jawaban tidak valid." };
+  }
+  const parsed = z.record(z.string(), z.unknown()).safeParse(answer);
+  if (!parsed.success) return { ok: false, error: "Format jawaban tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_interactive_answer", {
+    p_attempt_id: attemptId,
+    p_question_id: questionId,
+    p_answer: parsed.data as Json,
+  });
+  if (error) {
+    return { ok: false, error: databaseErrorMessage(error, "Jawaban belum tersimpan.") };
+  }
   return { ok: true, data: undefined };
 }
 

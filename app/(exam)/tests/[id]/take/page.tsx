@@ -39,13 +39,13 @@ export default async function TakePage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_options(id, label, text)",
+        "id, section, position, prompt, image_path, audio_path, question_type, question_options(id, label, text)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
     supabase
       .from("attempt_answers")
-      .select("question_id, selected_option_id")
+      .select("question_id, selected_option_id, answer_payload")
       .eq("attempt_id", attempt.data.id),
   ]);
 
@@ -58,25 +58,33 @@ export default async function TakePage({
     return a.position - b.position;
   });
 
-  const questions = ordered.map((question, index) => ({
-    id: question.id,
-    number: index + 1,
-    section: question.section,
-    prompt: question.prompt,
-    imagePath: question.image_path,
-    audioPath: question.audio_path,
-    options: [...(question.question_options ?? [])]
-      .sort((a, b) => a.label.localeCompare(b.label))
-      .map((option) => ({
-        id: option.id,
-        label: option.label,
-        text: option.text,
-      })),
+  const questions = await Promise.all(ordered.map(async (question, index) => {
+    const interaction = question.question_type === "multiple_choice"
+      ? null
+      : await supabase.rpc("interactive_question_payload", { p_question_id: question.id });
+    const payload = interaction?.data as { interaction_config?: import("@/lib/supabase/database.types").Json } | null;
+    return {
+      id: question.id,
+      number: index + 1,
+      section: question.section,
+      prompt: question.prompt,
+      imagePath: question.image_path,
+      audioPath: question.audio_path,
+      questionType: question.question_type,
+      interactionConfig: payload?.interaction_config ?? {},
+      options: [...(question.question_options ?? [])]
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map((option) => ({ id: option.id, label: option.label, text: option.text })),
+    };
   }));
 
   const initialAnswers: Record<string, string> = {};
+  const initialInteractiveAnswers: Record<string, Record<string, unknown>> = {};
   for (const answer of answersResult.data ?? []) {
-    initialAnswers[answer.question_id] = answer.selected_option_id;
+    if (answer.selected_option_id) initialAnswers[answer.question_id] = answer.selected_option_id;
+    if (answer.answer_payload && Object.keys(answer.answer_payload).length > 0) {
+      initialInteractiveAnswers[answer.question_id] = answer.answer_payload as Record<string, unknown>;
+    }
   }
 
   return (
@@ -88,6 +96,7 @@ export default async function TakePage({
       serverNow={serverNow.toISOString()}
       questions={questions}
       initialAnswers={initialAnswers}
+      initialInteractiveAnswers={initialInteractiveAnswers}
       studentName={profile.full_name}
     />
   );
