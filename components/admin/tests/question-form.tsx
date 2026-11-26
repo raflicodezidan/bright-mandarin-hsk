@@ -161,6 +161,13 @@ export function QuestionForm({
         : questionType === "hanzi_blank"
           ? { correctLabel: blankCorrect }
           : { order: tokenOrder };
+      if (
+        questionType === "matching" &&
+        leftItems.some((item) => !matchingKeys[item.id])
+      ) {
+        setError("Pasangkan semua item kiri dengan item kanan sebelum menyimpan.");
+        return;
+      }
       startTransition(async () => {
         const matchingConfig = questionType === "matching" ? {
           leftItems,

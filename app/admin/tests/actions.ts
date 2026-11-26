@@ -14,6 +14,7 @@ import {
   STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
+  importedInteractiveQuestionSchema,
   importedQuestionSchema,
   interactiveQuestionSchema,
   pdfBlankQuestionSchema,
@@ -510,6 +511,54 @@ export async function saveImportedQuestionAction(input: {
   if (uploadedOptionImages.length) revalidateTag(STORAGE_FILES_TAG, "max");
 
   revalidatePath(`/admin/tests/${parsedTestId.data}`);
+  return { ok: true, data: { questionId: data } };
+}
+
+export async function saveImportedInteractiveQuestionAction(
+  input: unknown,
+): Promise<TestActionResult<{ questionId: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+
+  const parsed = importedInteractiveQuestionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Data soal interaktif tidak valid.",
+    };
+  }
+
+  const managed = await managedTest(parsed.data.testId);
+  if (!managed.ok) return { ok: false, error: managed.error };
+
+  const answerKey =
+    parsed.data.type === "matching"
+      ? parsed.data.answerKey?.matches &&
+        Object.keys(parsed.data.answerKey.matches).length > 0
+        ? { matches: parsed.data.answerKey.matches }
+        : {}
+      : parsed.data.answerKey?.correctLabel
+        ? { correctLabel: parsed.data.answerKey.correctLabel }
+        : {};
+
+  const { data, error } = await managed.supabase.rpc("save_interactive_question", {
+    p_test_id: parsed.data.testId,
+    p_question_id: null,
+    p_section: "reading",
+    p_type: parsed.data.type,
+    p_prompt: parsed.data.prompt,
+    p_config: parsed.data.config as Json,
+    p_answer_key: answerKey as Json,
+  });
+
+  if (error || !data) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Gagal menyimpan soal hasil scan. Coba lagi."),
+    };
+  }
+
+  revalidatePath(`/admin/tests/${parsed.data.testId}`);
   return { ok: true, data: { questionId: data } };
 }
 

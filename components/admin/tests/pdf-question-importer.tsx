@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import {
+  saveImportedInteractiveQuestionAction,
   saveImportedQuestionAction,
   uploadTestPdfAction,
 } from "@/app/admin/tests/actions";
@@ -42,16 +43,41 @@ export function PdfQuestionImporter({
     for (let index = 0; index < drafts.length; index += 1) {
       const draft = drafts[index];
       setNotice(`Menyimpan soal ${index + 1} dari ${drafts.length} ke daftar Reading…`);
-      const result = await saveImportedQuestionAction({
-        testId,
-        prompt: draft.prompt,
-        options: draft.options.map((option) => ({
-          label: option.label,
-          text: option.text,
-          imageDataUrl: option.imageDataUrl ?? null,
-        })),
-        correctLabel: "",
-      });
+      const result =
+        draft.kind === "multiple_choice"
+          ? await saveImportedQuestionAction({
+              testId,
+              prompt: draft.prompt,
+              options: draft.options.map((option) => ({
+                label: option.label,
+                text: option.text,
+                imageDataUrl: option.imageDataUrl ?? null,
+              })),
+              correctLabel: "",
+            })
+          : draft.kind === "hanzi_blank"
+            ? await saveImportedInteractiveQuestionAction({
+                testId,
+                type: "hanzi_blank",
+                prompt: draft.prompt,
+                config: { choices: draft.choices, blankCount: 1 },
+                answerKey: draft.correctLabel
+                  ? { correctLabel: draft.correctLabel }
+                  : {},
+              })
+            : await saveImportedInteractiveQuestionAction({
+                testId,
+                type: "matching",
+                prompt: draft.prompt,
+                config: {
+                  leftItems: draft.leftItems,
+                  rightItems: draft.rightItems,
+                },
+                answerKey:
+                  Object.keys(draft.matches).length > 0
+                    ? { matches: draft.matches }
+                    : {},
+              });
       if (!result.ok) {
         failures.push(`Nomor ${draft.sourceNumber}: ${result.error}`);
         continue;

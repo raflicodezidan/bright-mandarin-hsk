@@ -41,6 +41,26 @@ function letter(index: number): string {
   return String.fromCharCode(65 + index);
 }
 
+function PromptText({ prompt }: { prompt: string }) {
+  const parts = prompt.split("{{blank}}");
+  if (parts.length === 1) return <>{prompt}</>;
+  return (
+    <>
+      {parts.map((part, index) => (
+        <React.Fragment key={index}>
+          {part}
+          {index < parts.length - 1 ? (
+            <span
+              aria-label="bagian kosong"
+              className="mx-1 inline-block min-w-16 border-b border-text align-middle"
+            />
+          ) : null}
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 function OptionButton({
   selected,
   disabled,
@@ -171,7 +191,7 @@ export function PdfQuestionView({
       </header>
 
       <p className="font-cjk text-question" lang="zh-Hans">
-        {question.prompt}
+        <PromptText prompt={question.prompt} />
       </p>
 
       {question.audioPath ? (
@@ -197,19 +217,21 @@ export function PdfQuestionView({
         />
       ) : null}
 
-      {question.pdfPath ? (
-        <PdfQuestionDocument
-          src={mediaUrl(question.pdfPath) ?? ""}
-          overlays={overlays}
-          selection={selection}
-          disabled={disabled}
-          onSelect={selectOverlay}
-        />
-      ) : (
-        <Alert tone="warning">
-          PDF murid belum tersedia. Hubungi pengajar agar dokumen soal dapat ditampilkan.
-        </Alert>
-      )}
+      {overlays.length > 0 ? (
+        question.pdfPath ? (
+          <PdfQuestionDocument
+            src={mediaUrl(question.pdfPath) ?? ""}
+            overlays={overlays}
+            selection={selection}
+            disabled={disabled}
+            onSelect={selectOverlay}
+          />
+        ) : (
+          <Alert tone="warning">
+            PDF murid belum tersedia. Hubungi pengajar agar dokumen soal dapat ditampilkan.
+          </Alert>
+        )
+      ) : null}
 
       {question.questionType === "multiple_choice" ? (
         <div className="flex flex-col gap-2">

@@ -79,6 +79,11 @@ const matchingItemSchema = z.object({
   text: z.string().trim().min(1).max(300),
 });
 
+const hanziChoiceSchema = z.object({
+  label: z.string().regex(/^[A-Fa-f]$/),
+  text: z.string().trim().min(1).max(2000),
+});
+
 export const interactiveQuestionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("matching"),
@@ -95,10 +100,10 @@ export const interactiveQuestionSchema = z.discriminatedUnion("type", [
     section: questionSectionSchema,
     prompt: z.string().trim().min(1).max(4000).refine((value) => value.includes("{{blank}}"), "Teks harus memuat {{blank}}."),
     config: z.object({
-      choices: z.array(questionOptionSchema).min(2).max(5),
+      choices: z.array(hanziChoiceSchema).min(2).max(6),
       blankCount: z.literal(1),
     }),
-    answerKey: z.object({ correctLabel: z.string().regex(/^[A-E]$/) }),
+    answerKey: z.object({ correctLabel: z.string().regex(/^[A-Fa-f]$/) }),
   }),
   z.object({
     type: z.literal("rearrange_sentence"),
@@ -108,6 +113,44 @@ export const interactiveQuestionSchema = z.discriminatedUnion("type", [
       tokens: z.array(matchingItemSchema).min(2).max(30),
     }),
     answerKey: z.object({ order: z.array(z.string().min(1).max(40)).min(2).max(30) }),
+  }),
+]);
+
+// Impor hasil scan PDF: kunci jawaban boleh kosong karena halaman kunci tidak
+// dibaca. Soal tetap dibuat dan ditandai "Kunci belum diisi".
+export const importedInteractiveQuestionSchema = z.discriminatedUnion("type", [
+  z.object({
+    testId: z.string().uuid(),
+    type: z.literal("matching"),
+    prompt: z.string().trim().min(1).max(4000),
+    config: z.object({
+      leftItems: z.array(matchingItemSchema).min(2).max(10),
+      rightItems: z.array(matchingItemSchema).min(2).max(10),
+    }),
+    answerKey: z
+      .object({ matches: z.record(z.string(), z.string()).optional() })
+      .optional(),
+  }),
+  z.object({
+    testId: z.string().uuid(),
+    type: z.literal("hanzi_blank"),
+    prompt: z
+      .string()
+      .trim()
+      .min(1)
+      .max(4000)
+      .refine((value) => value.includes("{{blank}}"), "Teks harus memuat {{blank}}."),
+    config: z.object({
+      choices: z.array(hanziChoiceSchema).min(2).max(6),
+      blankCount: z.literal(1),
+    }),
+    answerKey: z
+      .object({
+        correctLabel: z
+          .union([z.literal(""), z.string().regex(/^[A-Fa-f]$/)])
+          .optional(),
+      })
+      .optional(),
   }),
 ]);
 
