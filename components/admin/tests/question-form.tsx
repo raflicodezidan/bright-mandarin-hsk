@@ -79,12 +79,12 @@ export function QuestionForm({
       ? initial.options.map((option) => ({ ...newOption(option.text ?? ""), imagePath: option.imagePath ?? null, imageUrl: option.imageUrl ?? null }))
       : [newOption(), newOption()],
   );
-  const [correctIndex, setCorrectIndex] = React.useState(() => {
+  const [correctIndex, setCorrectIndex] = React.useState<number | null>(() => {
     if (!initial) return 0;
     const index = initial.options.findIndex(
       (option) => option.label === initial.correctLabel,
     );
-    return index >= 0 ? index : 0;
+    return index >= 0 ? index : null;
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [audioFile, setAudioFile] = React.useState<File | null>(null);
@@ -139,6 +139,7 @@ export function QuestionForm({
   function removeOption(index: number) {
     setOptions((current) => current.filter((_, itemIndex) => itemIndex !== index));
     setCorrectIndex((current) => {
+      if (current === null) return current;
       if (current === index) return 0;
       if (current > index) return current - 1;
       return current;
@@ -190,6 +191,11 @@ export function QuestionForm({
         router.push(`/admin/tests/${testId}`);
         router.refresh();
       });
+      return;
+    }
+
+    if (correctIndex === null) {
+      setError("Pilih kunci jawaban sebelum menyimpan.");
       return;
     }
 

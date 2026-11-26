@@ -48,6 +48,24 @@ export const questionSchema = z.object({
   correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
 });
 
+// Impor hasil scan PDF: kunci jawaban belum diketahui karena halaman kunci
+// tidak dibaca. Soal tetap dibuat dan ditandai "Kunci belum diisi".
+export const importedQuestionSchema = z.object({
+  section: questionSectionSchema,
+  prompt: z
+    .string()
+    .trim()
+    .min(1, "Teks soal wajib diisi.")
+    .max(4000, "Teks soal maksimal 4000 karakter."),
+  options: z
+    .array(questionOptionSchema)
+    .min(2, "Minimal 2 opsi.")
+    .max(5, "Maksimal 5 opsi."),
+  correctLabel: z
+    .union([z.literal(""), z.string().regex(/^[A-E]$/)])
+    .optional(),
+});
+
 export const questionTextUpdateSchema = z.object({
   testId: z.string().uuid(),
   questionId: z.string().uuid(),

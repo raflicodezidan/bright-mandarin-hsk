@@ -81,7 +81,7 @@ export default async function QuestionPage({
           imagePath: option.image_path,
           imageUrl: option.image_path ? `/api/media?path=${encodeURIComponent(option.image_path)}` : null,
         })),
-      correctLabel: correct?.label ?? "A",
+      correctLabel: correct?.label ?? "",
       questionType: question.data.question_type,
       interactionConfig: question.data.interaction_config,
       interactionAnswer: question.data.interactive_answer_keys?.answer,

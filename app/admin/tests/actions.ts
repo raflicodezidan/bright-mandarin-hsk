@@ -14,6 +14,7 @@ import {
   STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
+  importedQuestionSchema,
   interactiveQuestionSchema,
   pdfBlankQuestionSchema,
   pdfChoiceQuestionSchema,
@@ -439,7 +440,7 @@ export async function saveImportedQuestionAction(input: {
   testId: string;
   prompt: string;
   options: { label: string; text: string; imageDataUrl?: string | null; imagePath?: string | null }[];
-  correctLabel: string;
+  correctLabel?: string;
 }): Promise<TestActionResult<{ questionId: string }>> {
   const denied = await guardStaff();
   if (denied) return denied;
@@ -447,11 +448,11 @@ export async function saveImportedQuestionAction(input: {
   const parsedTestId = z.string().uuid().safeParse(input.testId);
   if (!parsedTestId.success) return { ok: false, error: "Tes tidak valid." };
 
-  const parsed = questionSchema.safeParse({
+  const parsed = importedQuestionSchema.safeParse({
     section: "reading",
     prompt: input.prompt,
     options: input.options.map(({ label, text, imageDataUrl, imagePath }) => ({ label, text: text || (imageDataUrl || imagePath ? `Gambar opsi ${label}` : ""), imagePath })),
-    correctLabel: input.correctLabel,
+    correctLabel: input.correctLabel ?? "",
   });
   if (!parsed.success) {
     return {
@@ -460,21 +461,9 @@ export async function saveImportedQuestionAction(input: {
     };
   }
 
-  const supabase = await createClient();
-  const session = await getSessionProfile();
-  const { data: accessibleTest } = await supabase
-    .from("tests")
-    .select("created_by")
-    .eq("id", parsedTestId.data)
-    .maybeSingle();
-
-  if (!accessibleTest) return { ok: false, error: "Tes tidak ditemukan." };
-  if (
-    !session ||
-    (!isOwnerRole(session.profile.role) && accessibleTest.created_by !== session.profile.id)
-  ) {
-    return { ok: false, error: "Hanya pemilik tes yang dapat mengubah soal." };
-  }
+  const managed = await managedTest(parsedTestId.data);
+  if (!managed.ok) return { ok: false, error: managed.error };
+  const supabase = managed.supabase;
 
   const optionImageFiles = parsed.data.options.map((option, index) => ({ ...option, imageDataUrl: input.options[index]?.imageDataUrl ?? null }));
   const uploadedOptionImages: string[] = [];
@@ -507,7 +496,7 @@ export async function saveImportedQuestionAction(input: {
       const imagePath = (option as { imagePath?: string }).imagePath;
       return { label: option.label, text: option.text || `Gambar opsi ${option.label}`, image_path: imagePath };
     }),
-    p_correct_label: parsed.data.correctLabel,
+    p_correct_label: parsed.data.correctLabel ?? "",
   });
 
   if (error || !data) {
