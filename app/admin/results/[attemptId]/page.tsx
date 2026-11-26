@@ -67,7 +67,7 @@ export default async function ResultDetailPage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, question_type, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
+        "id, section, position, prompt, question_type, interaction_config, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
       )
       .eq("test_id", attempt.data.test_id)
       .order("position", { ascending: true }),
@@ -221,7 +221,18 @@ export default async function ResultDetailPage({
                   (option) => option.id === correctId,
                 );
                 const isInteractive = question.question_type !== "multiple_choice";
+                const config = (question.interaction_config ?? {}) as {
+                  choices?: { label: string; text: string }[];
+                  leftItems?: { id: string; text: string }[];
+                  rightItems?: { id: string; text: string }[];
+                };
                 const key = question.interactive_answer_keys?.answer as Record<string, unknown> | undefined;
+                const choiceText = (label: unknown) =>
+                  config.choices?.find((choice) => choice.label === label)?.text ?? "";
+                const leftText = (id: unknown) =>
+                  config.leftItems?.find((item) => item.id === id)?.text ?? String(id ?? "");
+                const rightText = (id: unknown) =>
+                  config.rightItems?.find((item) => item.id === id)?.text ?? String(id ?? "");
                 const matchesPayload = (left: unknown, right: unknown) => {
                   if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) return false;
                   const a = left as Record<string, unknown>;
@@ -250,7 +261,43 @@ export default async function ResultDetailPage({
                     </TableCell>
                     <TableCell>
                       {isInteractive ? (
-                        <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">{JSON.stringify(answer?.payload ?? {})}</span>
+                        question.question_type === "hanzi_blank" ? (
+                          answer?.payload?.selectedLabel ? (
+                            <span className="text-sm">
+                              <span className="font-mono">
+                                {String(answer.payload.selectedLabel).toUpperCase()}.
+                              </span>{" "}
+                              <span className="font-cjk" lang="zh-Hans">
+                                {choiceText(answer.payload.selectedLabel)}
+                              </span>
+                            </span>
+                          ) : (
+                            <Badge tone="muted">Tidak dijawab</Badge>
+                          )
+                        ) : question.question_type === "matching" ? (
+                          answer?.payload?.matches &&
+                          Object.keys(answer.payload.matches as Record<string, string>).length > 0 ? (
+                            <div className="flex flex-col gap-1 text-sm">
+                              {Object.entries(answer.payload.matches as Record<string, string>).map(
+                                ([leftId, rightId]) => (
+                                  <span key={leftId} className="font-cjk" lang="zh-Hans">
+                                    {leftText(leftId)} → {rightText(rightId)}
+                                  </span>
+                                ),
+                              )}
+                            </div>
+                          ) : (
+                            <Badge tone="muted">Tidak dijawab</Badge>
+                          )
+                        ) : question.question_type === "rearrange_sentence" ? (
+                          <span className="font-cjk text-sm" lang="zh-Hans">
+                            {(answer?.payload?.order as string[] | undefined)?.join(" ") ?? "-"}
+                          </span>
+                        ) : (
+                          <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">
+                            {JSON.stringify(answer?.payload ?? {})}
+                          </span>
+                        )
                       ) : selected ? (
                         <span className="text-sm">
                           <span className="font-mono">{selected.label}.</span>{" "}
@@ -264,7 +311,43 @@ export default async function ResultDetailPage({
                     </TableCell>
                     <TableCell>
                       {isInteractive ? (
-                        <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">{JSON.stringify(key ?? {})}</span>
+                        question.question_type === "hanzi_blank" ? (
+                          key?.correctLabel ? (
+                            <span className="text-sm">
+                              <span className="font-mono">
+                                {String(key.correctLabel).toUpperCase()}.
+                              </span>{" "}
+                              <span className="font-cjk" lang="zh-Hans">
+                                {choiceText(key.correctLabel)}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-text-muted">-</span>
+                          )
+                        ) : question.question_type === "matching" ? (
+                          key?.matches &&
+                          Object.keys(key.matches as Record<string, string>).length > 0 ? (
+                            <div className="flex flex-col gap-1 text-sm">
+                              {Object.entries(key.matches as Record<string, string>).map(
+                                ([leftId, rightId]) => (
+                                  <span key={leftId} className="font-cjk" lang="zh-Hans">
+                                    {leftText(leftId)} → {rightText(rightId)}
+                                  </span>
+                                ),
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-text-muted">-</span>
+                          )
+                        ) : question.question_type === "rearrange_sentence" ? (
+                          <span className="font-cjk text-sm" lang="zh-Hans">
+                            {(key?.order as string[] | undefined)?.join(" ") ?? "-"}
+                          </span>
+                        ) : (
+                          <span className="max-w-md whitespace-pre-wrap break-all font-cjk text-sm" lang="zh-Hans">
+                            {JSON.stringify(key ?? {})}
+                          </span>
+                        )
                       ) : correct ? (
                         <span className="text-sm">
                           <span className="font-mono">{correct.label}.</span>{" "}
