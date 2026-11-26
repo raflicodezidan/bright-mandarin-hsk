@@ -35,6 +35,7 @@ const LABELS = ["A", "B", "C", "D", "E"] as const;
 export type QuestionFormInitial = {
   section: Section;
   prompt: string;
+  weight?: number;
   options: { label: string; text: string; imagePath?: string | null; imageUrl?: string | null }[];
   correctLabel: string;
   questionType?: "multiple_choice" | "matching" | "hanzi_blank" | "rearrange_sentence";
@@ -74,6 +75,7 @@ export function QuestionForm({
     initial?.section ?? "listening",
   );
   const [prompt, setPrompt] = React.useState(initial?.prompt ?? "");
+  const [weight, setWeight] = React.useState(initial?.weight ?? 1);
   const [options, setOptions] = React.useState<OptionDraft[]>(
     initial && initial.options.length >= 2
       ? initial.options.map((option) => ({ ...newOption(option.text ?? ""), imagePath: option.imagePath ?? null, imageUrl: option.imageUrl ?? null }))
@@ -187,6 +189,7 @@ export function QuestionForm({
           type: questionType,
           section,
           prompt,
+          weight,
           config: matchingConfig,
           answerKey: matchingAnswerKey,
         });
@@ -222,6 +225,7 @@ export function QuestionForm({
         imagePath: option.imagePath,
       }))));
       payload.set("correctLabel", LABELS[correctIndex]);
+      payload.set("weight", String(weight));
       startTransition(async () => {
         const result = await updateQuestionTextAction(payload);
         if (!result.ok) {
@@ -270,6 +274,7 @@ export function QuestionForm({
       }))),
     );
     payload.set("correctLabel", LABELS[correctIndex]);
+    payload.set("weight", String(weight));
     payload.set("existingImage", existingImage ?? "");
     payload.set("existingAudio", existingAudio ?? "");
     if (removeImage) payload.set("removeImage", "on");
@@ -356,6 +361,18 @@ export function QuestionForm({
             <option value="listening">Listening</option>
             <option value="reading">Reading</option>
           </Select>
+        </Field>
+
+        <Field label="Bobot (poin)" htmlFor="question-weight" required>
+          <Input
+            id="question-weight"
+            type="number"
+            min={1}
+            max={100}
+            value={weight}
+            onChange={(event) => setWeight(Number(event.target.value) || 1)}
+            disabled={pending || textOnly}
+          />
         </Field>
 
         <Field

@@ -190,6 +190,7 @@ export type Database = {
           question_type: Database["public"]["Enums"]["question_type"];
           interaction_config: Json;
           created_at: string;
+          weight: number;
         };
         Insert: {
           id?: string;
@@ -202,6 +203,7 @@ export type Database = {
           question_type?: Database["public"]["Enums"]["question_type"];
           interaction_config?: Json;
           created_at?: string;
+          weight?: number;
         };
         Update: {
           id?: string;
@@ -214,6 +216,7 @@ export type Database = {
           question_type?: Database["public"]["Enums"]["question_type"];
           interaction_config?: Json;
           created_at?: string;
+          weight?: number;
         };
         Relationships: [
           {
@@ -553,6 +556,7 @@ export type Database = {
           p_audio_path: string | null;
           p_options: Json;
           p_correct_label: string;
+          p_weight?: number;
         };
         Returns: string;
       };
@@ -565,6 +569,7 @@ export type Database = {
           p_prompt: string;
           p_config: Json;
           p_answer_key: Json;
+          p_weight?: number;
         };
         Returns: string;
       };

@@ -22,6 +22,7 @@ export type QuestionListItem = {
   hasAudio: boolean;
   hasImage: boolean;
   hasKey: boolean;
+  weight?: number;
   questionType?: string;
 };
 
@@ -98,6 +99,7 @@ export function QuestionList({
                 <div className="flex flex-wrap items-center gap-2">
                   {item.hasAudio ? <Badge tone="primary">Audio</Badge> : null}
                   {item.hasImage ? <Badge tone="neutral">Gambar</Badge> : null}
+                  {item.weight && item.weight !== 1 ? <Badge tone="neutral">{item.weight} poin</Badge> : null}
                   {!item.hasKey ? (
                     <Badge tone="accent">Kunci belum diisi</Badge>
                   ) : null}

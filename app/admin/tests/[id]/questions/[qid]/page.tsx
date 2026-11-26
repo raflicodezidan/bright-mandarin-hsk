@@ -55,7 +55,7 @@ export default async function QuestionPage({
     const question = await supabase
       .from("questions")
       .select(
-        "id, test_id, section, prompt, image_path, audio_path, question_type, interaction_config, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
+        "id, test_id, section, prompt, image_path, audio_path, question_type, weight, interaction_config, question_options(id, label, text, image_path), answer_keys(correct_option_id), interactive_answer_keys(answer)",
       )
       .eq("id", qid)
       .maybeSingle();
@@ -75,6 +75,7 @@ export default async function QuestionPage({
     initial = {
       section: question.data.section,
       prompt: question.data.prompt,
+      weight: question.data.weight ?? 1,
         options: options.map((option) => ({
           label: option.label,
           text: option.text ?? "",

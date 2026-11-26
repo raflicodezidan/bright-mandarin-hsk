@@ -37,7 +37,7 @@ export default async function TestDetailPage({
     supabase
       .from("questions")
       .select(
-        "id, section, position, prompt, image_path, audio_path, question_type, question_options(label), answer_keys(correct_option_id), interactive_answer_keys(question_id)",
+        "id, section, position, prompt, image_path, audio_path, question_type, weight, question_options(label), answer_keys(correct_option_id), interactive_answer_keys(question_id)",
       )
       .eq("test_id", id)
       .order("position", { ascending: true }),
@@ -94,6 +94,7 @@ export default async function TestDetailPage({
         id: question.id,
         number: index + 1,
         prompt: question.prompt,
+        weight: question.weight ?? 1,
         hasAudio: Boolean(question.audio_path),
         hasImage: Boolean(question.image_path),
         hasKey: Boolean(question.answer_keys || question.interactive_answer_keys),

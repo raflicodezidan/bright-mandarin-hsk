@@ -46,6 +46,13 @@ export const questionSchema = z.object({
     .min(2, "Minimal 2 opsi.")
     .max(5, "Maksimal 5 opsi."),
   correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
+  weight: z.coerce
+    .number()
+    .int("Bobot harus bilangan bulat.")
+    .min(1, "Bobot minimal 1.")
+    .max(100, "Bobot maksimal 100.")
+    .default(1)
+    .optional(),
 });
 
 // Impor hasil scan PDF: kunci jawaban belum diketahui karena halaman kunci
@@ -57,6 +64,13 @@ export const importedQuestionSchema = z.object({
     .trim()
     .min(1, "Teks soal wajib diisi.")
     .max(4000, "Teks soal maksimal 4000 karakter."),
+  weight: z.coerce
+    .number()
+    .int("Bobot harus bilangan bulat.")
+    .min(1, "Bobot minimal 1.")
+    .max(100, "Bobot maksimal 100.")
+    .default(1)
+    .optional(),
   options: z
     .array(questionOptionSchema)
     .min(2, "Minimal 2 opsi.")
@@ -72,6 +86,12 @@ export const questionTextUpdateSchema = z.object({
   prompt: z.string().trim().min(1, "Teks soal wajib diisi.").max(4000),
   options: z.array(questionOptionSchema).min(2).max(5),
   correctLabel: z.string().regex(/^[A-E]$/, "Pilih kunci jawaban."),
+  weight: z.coerce
+    .number()
+    .int("Bobot harus bilangan bulat.")
+    .min(1, "Bobot minimal 1.")
+    .max(100, "Bobot maksimal 100.")
+    .optional(),
 });
 
 const matchingItemSchema = z.object({
@@ -89,6 +109,13 @@ export const interactiveQuestionSchema = z.discriminatedUnion("type", [
     type: z.literal("matching"),
     section: questionSectionSchema,
     prompt: z.string().trim().min(1).max(4000),
+    weight: z.coerce
+      .number()
+      .int("Bobot harus bilangan bulat.")
+      .min(1, "Bobot minimal 1.")
+      .max(100, "Bobot maksimal 100.")
+      .default(1)
+      .optional(),
     config: z.object({
       leftItems: z.array(matchingItemSchema).min(2).max(10),
       rightItems: z.array(matchingItemSchema).min(2).max(10),
@@ -99,6 +126,13 @@ export const interactiveQuestionSchema = z.discriminatedUnion("type", [
     type: z.literal("hanzi_blank"),
     section: questionSectionSchema,
     prompt: z.string().trim().min(1).max(4000).refine((value) => value.includes("{{blank}}"), "Teks harus memuat {{blank}}."),
+    weight: z.coerce
+      .number()
+      .int("Bobot harus bilangan bulat.")
+      .min(1, "Bobot minimal 1.")
+      .max(100, "Bobot maksimal 100.")
+      .default(1)
+      .optional(),
     config: z.object({
       choices: z.array(hanziChoiceSchema).min(2).max(6),
       blankCount: z.literal(1),
@@ -109,6 +143,13 @@ export const interactiveQuestionSchema = z.discriminatedUnion("type", [
     type: z.literal("rearrange_sentence"),
     section: questionSectionSchema,
     prompt: z.string().trim().min(1).max(4000),
+    weight: z.coerce
+      .number()
+      .int("Bobot harus bilangan bulat.")
+      .min(1, "Bobot minimal 1.")
+      .max(100, "Bobot maksimal 100.")
+      .default(1)
+      .optional(),
     config: z.object({
       tokens: z.array(matchingItemSchema).min(2).max(30),
     }),
@@ -123,6 +164,13 @@ export const importedInteractiveQuestionSchema = z.discriminatedUnion("type", [
     testId: z.string().uuid(),
     type: z.literal("matching"),
     prompt: z.string().trim().min(1).max(4000),
+    weight: z.coerce
+      .number()
+      .int("Bobot harus bilangan bulat.")
+      .min(1, "Bobot minimal 1.")
+      .max(100, "Bobot maksimal 100.")
+      .default(1)
+      .optional(),
     config: z.object({
       leftItems: z.array(matchingItemSchema).min(2).max(10),
       rightItems: z.array(matchingItemSchema).min(2).max(10),
@@ -140,6 +188,13 @@ export const importedInteractiveQuestionSchema = z.discriminatedUnion("type", [
       .min(1)
       .max(4000)
       .refine((value) => value.includes("{{blank}}"), "Teks harus memuat {{blank}}."),
+    weight: z.coerce
+      .number()
+      .int("Bobot harus bilangan bulat.")
+      .min(1, "Bobot minimal 1.")
+      .max(100, "Bobot maksimal 100.")
+      .default(1)
+      .optional(),
     config: z.object({
       choices: z.array(hanziChoiceSchema).min(2).max(6),
       blankCount: z.literal(1),

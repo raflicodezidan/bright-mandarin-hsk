@@ -201,6 +201,7 @@ export async function saveQuestionAction(
   const section = String(formData.get("section") ?? "");
   const prompt = String(formData.get("prompt") ?? "");
   const correctLabel = String(formData.get("correctLabel") ?? "");
+  const weightRaw = String(formData.get("weight") ?? "");
   const optionsRaw = String(formData.get("options") ?? "[]");
   const existingImage = String(formData.get("existingImage") ?? "");
   const existingAudio = String(formData.get("existingAudio") ?? "");
@@ -247,6 +248,7 @@ export async function saveQuestionAction(
       return { label: option.label ?? "", text: option.text || (option.imagePath ? `Gambar opsi ${option.label ?? ""}` : ""), imagePath: option.imagePath };
     }),
     correctLabel,
+    weight: weightRaw || undefined,
   });
 
   if (!parsed.success) {
@@ -312,6 +314,7 @@ export async function saveQuestionAction(
     p_audio_path: audioPath,
     p_options: parsedOptions,
     p_correct_label: parsed.data.correctLabel,
+    p_weight: parsed.data.weight,
   });
 
   if (error || !data) {
@@ -359,6 +362,7 @@ export async function saveInteractiveQuestionAction(input: unknown): Promise<Tes
     p_prompt: parsed.data.prompt,
     p_config: parsed.data.config,
     p_answer_key: parsed.data.answerKey,
+    p_weight: parsed.data.weight,
   });
   if (error || !data) {
     return { ok: false, error: errorMessage(error, "Gagal menyimpan soal interaktif.") };
@@ -498,6 +502,7 @@ export async function saveImportedQuestionAction(input: {
       return { label: option.label, text: option.text || `Gambar opsi ${option.label}`, image_path: imagePath };
     }),
     p_correct_label: parsed.data.correctLabel ?? "",
+    p_weight: 1,
   });
 
   if (error || !data) {
@@ -549,6 +554,7 @@ export async function saveImportedInteractiveQuestionAction(
     p_prompt: parsed.data.prompt,
     p_config: parsed.data.config as Json,
     p_answer_key: answerKey as Json,
+    p_weight: parsed.data.weight,
   });
 
   if (error || !data) {
@@ -1118,6 +1124,7 @@ export async function savePdfChoiceQuestionAction(
     p_audio_path: questionAudioPath,
     p_options: choiceOptions.map((option) => ({ label: option.label, text: option.text || `Gambar opsi ${option.label}`, image_path: option.imagePath })),
     p_correct_label: parsed.data.correctLabel,
+    p_weight: 1,
   });
   if (error || !questionId) {
     await removeMedia(uploadedOptionImages);
@@ -1188,6 +1195,7 @@ export async function savePdfBlankQuestionsAction(
         overlays: [blank.overlay],
       } as Json,
       p_answer_key: { correctLabel: blank.correctLabel } as Json,
+      p_weight: 1,
     });
     if (error || !data) {
       for (const id of created) {
@@ -1259,6 +1267,7 @@ export async function savePdfMatchingQuestionAction(
       overlays: parsed.data.overlays,
     } as Json,
     p_answer_key: { matches: parsed.data.matches } as Json,
+    p_weight: 1,
   });
   if (error || !data) {
     return { ok: false, error: errorMessage(error, "Gagal menyimpan matching PDF.") };
@@ -1318,6 +1327,7 @@ export async function savePdfRearrangeQuestionAction(
       overlays: parsed.data.overlays,
     } as Json,
     p_answer_key: { order: parsed.data.order } as Json,
+    p_weight: 1,
   });
   if (error || !data) {
     return { ok: false, error: errorMessage(error, "Gagal menyimpan susun kalimat PDF.") };
