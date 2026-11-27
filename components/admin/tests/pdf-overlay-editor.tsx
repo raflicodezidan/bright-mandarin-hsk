@@ -515,6 +515,12 @@ export function PdfOverlayEditor({
       ) {
         return setError("Letakkan satu lingkaran untuk setiap opsi.");
       }
+      if (!teacherUrl) {
+        return setError("Unggah PDF guru terlebih dahulu sebelum menyimpan soal di atas PDF.");
+      }
+      if (section === "listening" && !sharedAudioPath) {
+        return setError("Unggah audio Listening bersama terlebih dahulu (atau pilih Bagian Reading).");
+      }
       startTransition(async () => {
         const result = await savePdfChoiceQuestionAction({
           testId,
@@ -542,6 +548,12 @@ export function PdfOverlayEditor({
       }
       if (blanks.some((blank) => !blank.prompt.trim())) {
         return setError("Label setiap titik kosong wajib diisi.");
+      }
+      if (!teacherUrl) {
+        return setError("Unggah PDF guru terlebih dahulu sebelum menyimpan soal di atas PDF.");
+      }
+      if (section === "listening" && !sharedAudioPath) {
+        return setError("Unggah audio Listening bersama terlebih dahulu (atau pilih Bagian Reading).");
       }
       startTransition(async () => {
         const result = await savePdfBlankQuestionsAction({
@@ -580,6 +592,12 @@ export function PdfOverlayEditor({
       ) {
         return setError("Pasangkan semua nomor matching dengan pilihan yang berbeda.");
       }
+      if (!teacherUrl) {
+        return setError("Unggah PDF guru terlebih dahulu sebelum menyimpan soal di atas PDF.");
+      }
+      if (section === "listening" && !sharedAudioPath) {
+        return setError("Unggah audio Listening bersama terlebih dahulu (atau pilih Bagian Reading).");
+      }
       startTransition(async () => {
         const result = await savePdfMatchingQuestionAction({
           testId,
@@ -601,6 +619,12 @@ export function PdfOverlayEditor({
     if (!prompt.trim()) return setError("Prompt soal wajib diisi.");
     if (tokens.length < 2 || tokens.some((token) => !token.text.trim())) {
       return setError("Minimal dua potongan kalimat dan semua teksnya wajib diisi.");
+    }
+    if (!teacherUrl) {
+      return setError("Unggah PDF guru terlebih dahulu sebelum menyimpan soal di atas PDF.");
+    }
+    if (section === "listening" && !sharedAudioPath) {
+      return setError("Unggah audio Listening bersama terlebih dahulu (atau pilih Bagian Reading).");
     }
     startTransition(async () => {
       const result = await savePdfRearrangeQuestionAction({
