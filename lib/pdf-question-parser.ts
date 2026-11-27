@@ -78,13 +78,15 @@ function stripBlank(text: string): string {
 function sectionOf(line: string): Section | null {
   if (
     /^\s*(?:[IVX]+[.)、]?\s*)?(?:选词填空)/u.test(line) ||
-    /fill in each blank/i.test(line)
+    /fill in each blank/i.test(line) ||
+    /^\s*(?:part|section)\s*(?:i|1|one)\b/i.test(line)
   ) {
     return "hanzi_blank";
   }
   if (
     /^\s*(?:[IVX]+[.)、]?\s*)?(?:匹配句子)/u.test(line) ||
-    /match the sentences/i.test(line)
+    /match the sentences/i.test(line) ||
+    /^\s*(?:part|section)\s*(?:iii|3|three)\b/i.test(line)
   ) {
     return "matching";
   }
@@ -96,7 +98,8 @@ function sectionOf(line: string): Section | null {
   }
   if (
     /^\s*(?:[IVX]+[.)、]?\s*)?(?:选择正确答案)/u.test(line) ||
-    /choose the correct answer for each question/i.test(line)
+    /choose the correct answer for each question/i.test(line) ||
+    /^\s*(?:part|section)\s*(?:ii|2|two)\b/i.test(line)
   ) {
     return "multiple_choice";
   }
@@ -114,7 +117,30 @@ function parseWordBank(line: string): { label: string; text: string }[] | null {
     .filter((item) => item.text.length > 0);
 }
 
+// Pisahkan opsi yang ditulis sejajar dalam satu baris (mis. "A. ... B. ... C. ...")
+// menjadi baris terpisah agar parser dapat membacanya.
+function splitInlineOptions(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    const optionMatches = [...line.matchAll(/(?:^|\s)([A-Ea-e])\s*[.、)]\s*/g)];
+    if (optionMatches.length >= 2) {
+      const first = optionMatches[0].index ?? 0;
+      if (first > 0) out.push(line.slice(0, first).trim());
+      for (let i = 0; i < optionMatches.length; i += 1) {
+        const start = optionMatches[i].index ?? 0;
+        const end = i + 1 < optionMatches.length ? (optionMatches[i + 1].index ?? line.length) : line.length;
+        out.push(line.slice(start, end).trim());
+      }
+    } else {
+      out.push(raw);
+    }
+  }
+  return out.filter((item) => item.length > 0);
+}
+
 export function parseReadingPdfLines(lines: string[]): ImportedQuestionDraft[] {
+  const lines2 = splitInlineOptions(lines);
   const drafts: ImportedQuestionDraft[] = [];
   let section: Section | null = null;
   let wordBank: { label: string; text: string }[] = [];
@@ -202,7 +228,7 @@ export function parseReadingPdfLines(lines: string[]): ImportedQuestionDraft[] {
     }
   }
 
-  for (const rawLine of lines) {
+  for (const rawLine of lines2) {
     const line = clean(rawLine);
     if (!line) continue;
 
