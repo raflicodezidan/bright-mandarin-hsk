@@ -124,7 +124,7 @@ export function QuestionForm({
     return key?.order ?? tokens.map((token) => token.id);
   });
 
-  const hasAudio = Boolean(audioFile) || (Boolean(existingAudio) && !removeAudio);
+  const hasAudio = Boolean(audioFile) || (Boolean(existingAudio) && !removeAudio) || Boolean(sharedListeningAudioUrl);
 
   function updateOption(key: string, text: string) {
     setOptions((current) =>
