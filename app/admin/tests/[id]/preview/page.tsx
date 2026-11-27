@@ -30,7 +30,7 @@ export default async function PreviewPage({
   const [test, questions] = await Promise.all([
     supabase
       .from("tests")
-      .select("id, title, description, student_pdf_path")
+      .select("id, title, description, pdf_path, student_pdf_path")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -51,7 +51,12 @@ export default async function PreviewPage({
     return a.position - b.position;
   });
 
+  // Pratinjau staf memakai PDF murid bila ada. Jika belum diunggah, pakai PDF
+  // guru agar admin dapat memeriksa posisi lingkaran/titik yang sudah dibuat.
+  // Halaman ujian murid tetap hanya memakai PDF murid yang bersih.
   const studentPdfPath = test.data.student_pdf_path;
+  const previewPdfPath = studentPdfPath ?? test.data.pdf_path;
+  const usingTeacherPdf = !studentPdfPath && Boolean(test.data.pdf_path);
 
   const rendered = await Promise.all(
     ordered.map(async (question, index) => {
@@ -108,7 +113,7 @@ export default async function PreviewPage({
         audioPath,
         imageUrl,
         audioUrl,
-        pdfPath: overlays.length > 0 ? studentPdfPath : null,
+        pdfPath: overlays.length > 0 ? previewPdfPath : null,
         pdfOverlays: overlays,
         questionType: question.question_type,
         interactionConfig: question.interaction_config ?? {},
@@ -137,6 +142,15 @@ export default async function PreviewPage({
           Ini pratinjau sebagai murid. Tidak ada timer dan tidak ada pengerjaan
           yang dibuat. Kunci jawaban tidak ditampilkan.
         </Alert>
+
+        {usingTeacherPdf ? (
+          <Alert tone="warning" title="PDF murid belum diunggah">
+            Pratinjau memakai PDF guru agar posisi soal dapat diperiksa. PDF guru
+            bisa memuat kunci jawaban; jangan tampilkan pratinjau ini kepada murid.
+            Unggah PDF murid yang bersih agar halaman ujian murid menampilkan
+            dokumen.
+          </Alert>
+        ) : null}
 
         {test.data.description ? (
           <p className="text-sm text-text-muted">{test.data.description}</p>
