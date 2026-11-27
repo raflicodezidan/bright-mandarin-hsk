@@ -1,22 +1,28 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getSessionProfile, isOwnerRole, isStaffRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  AUDIO_TYPES,
+  PDF_MAX_BYTES,
+  PDF_TYPES,
   copyMedia,
+  createSignedUpload,
+  mediaObjectExists,
   removeMedia,
   signMedia,
   uploadMedia,
-  uploadQuestionPdf,
   STORAGE_FILES_TAG,
 } from "@/lib/storage";
 import {
   importedInteractiveQuestionSchema,
   importedQuestionSchema,
   interactiveQuestionSchema,
+  mediaUploadTargetSchema,
   pdfBlankQuestionSchema,
   pdfChoiceQuestionSchema,
   pdfMatchingQuestionSchema,
@@ -884,38 +890,109 @@ export type TestRowData = Tables<"tests">;
 
 type PdfKind = "teacher" | "student";
 
-export async function uploadListeningAudioAction(
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+function uploadLockedError(kind: "listening_audio" | "teacher_pdf" | "student_pdf"): string {
+  return kind === "listening_audio"
+    ? "Audio bersama tidak dapat diubah setelah tes memiliki pengerjaan."
+    : "PDF tidak dapat diubah setelah tes memiliki pengerjaan.";
+}
+
+async function testHasAttempts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   testId: string,
-  file: File,
+): Promise<boolean> {
+  const { count } = await supabase
+    .from("attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("test_id", testId);
+  return (count ?? 0) > 0;
+}
+
+/**
+ * Membuat URL unggah bertanda tangan. File dikirim langsung dari browser ke
+ * Supabase Storage agar audio/PDF besar tidak melewati batas 4,5 MB Server
+ * Action Vercel.
+ */
+export async function createMediaUploadUrlAction(
+  input: unknown,
+): Promise<TestActionResult<{ path: string; token: string }>> {
+  const denied = await guardStaff();
+  if (denied) return denied;
+  const parsed = mediaUploadTargetSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Data unggahan tidak valid." };
+  }
+  const managed = await managedTest(parsed.data.testId);
+  if (!managed.ok) return { ok: false, error: managed.error };
+  if (await testHasAttempts(managed.supabase, parsed.data.testId)) {
+    return { ok: false, error: uploadLockedError(parsed.data.kind) };
+  }
+
+  const { kind, contentType, size } = parsed.data;
+  let path: string;
+
+  if (kind === "listening_audio") {
+    if (!AUDIO_TYPES.includes(contentType as (typeof AUDIO_TYPES)[number])) {
+      return { ok: false, error: "Audio harus berformat mp3." };
+    }
+    if (size > MAX_UPLOAD_BYTES) {
+      return { ok: false, error: "Ukuran audio maksimal 100 MB." };
+    }
+    path = `audio/${randomUUID()}.mp3`;
+  } else {
+    if (!PDF_TYPES.includes(contentType as (typeof PDF_TYPES)[number])) {
+      return { ok: false, error: "Dokumen soal harus berformat PDF." };
+    }
+    if (size > PDF_MAX_BYTES) {
+      return { ok: false, error: "Ukuran PDF maksimal 20 MB." };
+    }
+    path = `pdfs/${parsed.data.testId}/${randomUUID()}.pdf`;
+  }
+
+  const target = await createSignedUpload(path);
+  if (!target.ok) return target;
+  return { ok: true, data: { path: target.path, token: target.token } };
+}
+
+export async function setListeningAudioAction(
+  testId: string,
+  path: string,
 ): Promise<TestActionResult<{ path: string }>> {
   const denied = await guardStaff();
   if (denied) return denied;
   const parsedId = z.string().uuid().safeParse(testId);
-  if (!parsedId.success || !(file instanceof File)) {
+  const parsedPath = z.string().regex(/^audio\/[0-9a-f-]{36}\.mp3$/i).safeParse(path);
+  if (!parsedId.success || !parsedPath.success) {
     return { ok: false, error: "Data audio tidak valid." };
   }
   const managed = await managedTest(parsedId.data);
   if (!managed.ok) return { ok: false, error: managed.error };
-  const attemptCheck = await managed.supabase.from("attempts").select("id", { count: "exact", head: true }).eq("test_id", parsedId.data);
-  if ((attemptCheck.count ?? 0) > 0) return { ok: false, error: "Audio bersama tidak dapat diubah setelah tes memiliki pengerjaan." };
+  if (await testHasAttempts(managed.supabase, parsedId.data)) {
+    return { ok: false, error: uploadLockedError("listening_audio") };
+  }
+  if (!(await mediaObjectExists(parsedPath.data))) {
+    return { ok: false, error: "File audio tidak ditemukan. Coba unggah ulang." };
+  }
 
-  const uploaded = await uploadMedia(file, "audio");
-  if (!uploaded.ok) return uploaded;
   const previous = managed.test.listening_audio_path;
   const { error } = await managed.supabase
     .from("tests")
-    .update({ listening_audio_path: uploaded.path })
+    .update({ listening_audio_path: parsedPath.data })
     .eq("id", parsedId.data);
   if (error) {
-    await removeMedia([uploaded.path]);
+    await removeMedia([parsedPath.data]);
     return { ok: false, error: "Gagal menyimpan audio Listening bersama." };
   }
-  if (previous && previous !== uploaded.path) {
-    const stillUsed = await managed.supabase.from("questions").select("id", { count: "exact", head: true }).eq("audio_path", previous);
+  if (previous && previous !== parsedPath.data) {
+    const stillUsed = await managed.supabase
+      .from("questions")
+      .select("id", { count: "exact", head: true })
+      .eq("audio_path", previous);
     if ((stillUsed.count ?? 0) === 0) await removeMedia([previous]);
   }
   revalidatePath(`/admin/tests/${parsedId.data}`);
-  return { ok: true, data: { path: uploaded.path } };
+  return { ok: true, data: { path: parsedPath.data } };
 }
 
 export async function removeListeningAudioAction(
@@ -971,37 +1048,41 @@ async function setTestPdfPath(
     : supabase.from("tests").update({ pdf_path: path }).eq("id", testId);
 }
 
-export async function uploadTestPdfAction(
+export async function setTestPdfAction(
   testId: string,
-  file: File,
-  kind: PdfKind = "teacher",
+  kind: PdfKind,
+  path: string,
 ): Promise<TestActionResult<{ path: string; url: string | null }>> {
   const denied = await guardStaff();
   if (denied) return denied;
   const parsedId = z.string().uuid().safeParse(testId);
-  if (!parsedId.success || !(file instanceof File)) {
+  if (!parsedId.success || (kind !== "teacher" && kind !== "student")) {
     return { ok: false, error: "Data PDF tidak valid." };
   }
-  if (kind !== "teacher" && kind !== "student") {
-    return { ok: false, error: "Jenis PDF tidak valid." };
+  const parsedPath = z
+    .string()
+    .regex(/^pdfs\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.pdf$/i)
+    .safeParse(path);
+  if (!parsedPath.success || !parsedPath.data.startsWith(`pdfs/${parsedId.data}/`)) {
+    return { ok: false, error: "Data PDF tidak valid." };
   }
 
   const managed = await managedTest(parsedId.data);
   if (!managed.ok) return { ok: false, error: managed.error };
-
-  const uploaded = await uploadQuestionPdf(file, parsedId.data);
-  if (!uploaded.ok) return uploaded;
+  if (!(await mediaObjectExists(parsedPath.data))) {
+    return { ok: false, error: "File PDF tidak ditemukan. Coba unggah ulang." };
+  }
 
   const previous = kind === "student" ? managed.test.student_pdf_path : managed.test.pdf_path;
   const { error } = await setTestPdfPath(
     managed.supabase,
     parsedId.data,
     kind,
-    uploaded.path,
+    parsedPath.data,
   );
   if (error) {
     console.error("[tests] gagal menautkan PDF", error);
-    await removeMedia([uploaded.path]);
+    await removeMedia([parsedPath.data]);
     return {
       ok: false,
       error:
@@ -1010,13 +1091,13 @@ export async function uploadTestPdfAction(
           : "Gagal menautkan PDF ke tes.",
     };
   }
-  if (previous && previous !== uploaded.path) {
+  if (previous && previous !== parsedPath.data) {
     await removeMedia([previous]);
   }
   revalidatePath(`/admin/tests/${parsedId.data}`);
   return {
     ok: true,
-    data: { path: uploaded.path, url: await signMedia(uploaded.path, 3600) },
+    data: { path: parsedPath.data, url: await signMedia(parsedPath.data, 3600) },
   };
 }
 

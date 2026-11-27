@@ -10,8 +10,9 @@ import { useToast } from "@/components/ui/toast";
 import {
   saveImportedInteractiveQuestionAction,
   saveImportedQuestionAction,
-  uploadTestPdfAction,
+  setTestPdfAction,
 } from "@/app/admin/tests/actions";
+import { uploadFileDirect } from "@/lib/upload-client";
 import { createWorker } from "tesseract.js";
 import {
   parseReadingPdfLines,
@@ -119,7 +120,13 @@ export function PdfQuestionImporter({
     let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
     try {
       setNotice("Mengunggah PDF privat dan membaca soal…");
-      const uploaded = await uploadTestPdfAction(testId, file);
+      const direct = await uploadFileDirect(file, testId, "teacher_pdf");
+      if (!direct.ok) {
+        setError(direct.error);
+        setNotice(null);
+        return;
+      }
+      const uploaded = await setTestPdfAction(testId, "teacher", direct.path);
       if (!uploaded.ok) {
         setError(uploaded.error);
         setNotice(null);

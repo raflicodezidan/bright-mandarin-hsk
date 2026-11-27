@@ -26,10 +26,11 @@ import {
   savePdfChoiceQuestionAction,
   savePdfMatchingQuestionAction,
   savePdfRearrangeQuestionAction,
-  uploadTestPdfAction,
-  uploadListeningAudioAction,
+  setListeningAudioAction,
+  setTestPdfAction,
   removeListeningAudioAction,
 } from "@/app/admin/tests/actions";
+import { uploadFileDirect } from "@/lib/upload-client";
 
 type Mode = "choice" | "blank" | "matching" | "rearrange";
 type Section = "listening" | "reading";
@@ -343,7 +344,12 @@ export function PdfOverlayEditor({
           return;
         }
       }
-      const result = await uploadTestPdfAction(testId, file, kind);
+      const uploaded = await uploadFileDirect(file, testId, kind === "student" ? "student_pdf" : "teacher_pdf");
+      if (!uploaded.ok) {
+        setError(uploaded.error);
+        return;
+      }
+      const result = await setTestPdfAction(testId, kind, uploaded.path);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -397,7 +403,12 @@ export function PdfOverlayEditor({
     }
     setError(null);
     startTransition(async () => {
-      const result = await uploadListeningAudioAction(testId, file);
+      const uploaded = await uploadFileDirect(file, testId, "listening_audio");
+      if (!uploaded.ok) {
+        setError(uploaded.error);
+        return;
+      }
+      const result = await setListeningAudioAction(testId, uploaded.path);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -763,7 +774,7 @@ export function PdfOverlayEditor({
             <p className="text-sm font-medium text-text">Audio Listening bersama</p>
           </div>
           <p className="text-xs text-text-muted">
-            Opsional. Dipakai pada soal Listening yang tidak punya audio per-soal. Format MP3; ukuran tidak dibatasi aplikasi.
+            Opsional. Dipakai pada soal Listening yang tidak punya audio per-soal. Format MP3, maksimal 100 MB.
           </p>
           <input
             ref={sharedAudioInputRef}

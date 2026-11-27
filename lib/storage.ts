@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STORAGE_BUCKET } from "@/lib/storage-constants";
 
-export const STORAGE_BUCKET = "question-media";
+export { STORAGE_BUCKET };
 export const STORAGE_USAGE_TAG = "storage-usage";
 export const STORAGE_FILES_TAG = "storage-files";
 
@@ -132,9 +133,62 @@ export async function signMedia(
   expiresIn = 600,
 ): Promise<string | null> {
   if (!path) return null;
-  const admin = createAdminClient();
-  const { data } = await admin.storage.from(STORAGE_BUCKET).createSignedUrl(path, expiresIn);
-  return data?.signedUrl ?? null;
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(path, expiresIn);
+    return data?.signedUrl ?? null;
+  } catch (error) {
+    // Jangan gagalkan render halaman hanya karena media tidak bisa ditandatangani.
+    console.error("[storage] gagal menandatangani media", error);
+    return null;
+  }
+}
+
+export type SignedUploadTarget =
+  | { ok: true; path: string; token: string }
+  | { ok: false; error: string };
+
+/**
+ * Membuat URL unggah bertanda tangan agar file besar (audio/PDF) dikirim
+ * langsung dari browser ke Supabase Storage, bukan lewat Server Action yang
+ * dibatasi 4,5 MB oleh Vercel.
+ */
+export async function createSignedUpload(
+  path: string,
+): Promise<SignedUploadTarget> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUploadUrl(path);
+    if (error || !data?.token) {
+      console.error("[storage] gagal membuat URL unggah", error);
+      return { ok: false, error: "Gagal menyiapkan unggahan file. Coba lagi." };
+    }
+    return { ok: true, path, token: data.token };
+  } catch (error) {
+    console.error("[storage] penyimpanan belum dikonfigurasi", error);
+    return {
+      ok: false,
+      error:
+        "Penyimpanan file belum dikonfigurasi di server. Periksa SUPABASE_SERVICE_ROLE_KEY.",
+    };
+  }
+}
+
+export async function mediaObjectExists(path: string): Promise<boolean> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(path, 60);
+    return !error && Boolean(data?.signedUrl);
+  } catch (error) {
+    console.error("[storage] gagal memeriksa media", error);
+    return false;
+  }
 }
 
 export type StorageFile = {

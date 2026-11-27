@@ -218,6 +218,15 @@ export const questionInteractionUpdateSchema = z.object({
   answerKey: z.record(z.string(), z.unknown()),
 });
 
+// Permintaan URL unggah bertanda tangan untuk file besar (audio/PDF) yang
+// dikirim langsung dari browser ke Supabase Storage.
+export const mediaUploadTargetSchema = z.object({
+  testId: z.string().uuid(),
+  kind: z.enum(["listening_audio", "teacher_pdf", "student_pdf"]),
+  contentType: z.string().trim().min(1).max(120),
+  size: z.number().int().min(1),
+});
+
 // Overlay PDF memakai koordinat relatif (0–1) terhadap halaman asli. Kunci
 // jawaban tidak pernah disimpan di sini; kunci tetap di tabel answer_keys /
 // interactive_answer_keys.
