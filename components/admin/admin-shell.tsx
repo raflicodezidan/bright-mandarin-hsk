@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   ClipboardList,
   FileText,
   GraduationCap,
@@ -58,6 +59,13 @@ const NAV_ITEMS: {
     href: "/admin/teachers",
     label: "Guru",
     icon: GraduationCap,
+    exact: false,
+    roles: ["owner", "admin"],
+  },
+  {
+    href: "/admin/monitoring",
+    label: "Pantau Nilai",
+    icon: BarChart3,
     exact: false,
     roles: ["owner", "admin"],
   },

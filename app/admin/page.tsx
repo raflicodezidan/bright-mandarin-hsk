@@ -140,12 +140,20 @@ export default async function AdminDashboardPage() {
                   </Badge>
                 ) : null}
               </div>
-              <Link
-                href="/admin/teachers"
-                className="text-xs text-primary underline-offset-2 hover:underline"
-              >
-                Kelola guru
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/admin/monitoring"
+                  className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Pantau Nilai Murid →
+                </Link>
+                <Link
+                  href="/admin/teachers"
+                  className="text-xs text-text-muted underline-offset-2 hover:underline"
+                >
+                  Kelola guru
+                </Link>
+              </div>
             </div>
 
             {teacherKpis?.error ? (
