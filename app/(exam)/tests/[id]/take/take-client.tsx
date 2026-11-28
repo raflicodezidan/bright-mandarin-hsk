@@ -2,15 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListChecks, X } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { QuestionView } from "@/components/student/question-view";
 import type { PdfOverlay } from "@/components/student/pdf-page-overlays";
 import { PdfQuestionView } from "@/components/student/pdf-question-view";
-import { Field } from "@/components/ui/field";
-import { Select } from "@/components/ui/input";
+import { shuffleForSeed } from "@/lib/shuffle";
+import { cn } from "@/lib/utils";
 import {
   saveInteractiveAnswerAction,
   saveAnswerAction,
@@ -88,20 +88,140 @@ function InteractiveQuestionView({
     choices?: { label: string; text: string }[];
     tokens?: { id: string; text: string }[];
   };
-  const [matching, setMatching] = React.useState<Record<string, string>>(
+
+  // ── Matching state ──────────────────────────────────────────────────────
+  const [matches, setMatches] = React.useState<Record<string, string>>(
     (answer.matches as Record<string, string>) ?? {},
   );
-  const [order, setOrder] = React.useState<string[]>(() => {
-    const saved = answer.order as string[] | undefined;
-    const initial = saved ?? (config.tokens ?? []).map((token) => token.id);
-    if (saved || question.questionType !== "rearrange_sentence") return initial;
-    const shuffled = [...initial];
-    for (let i = shuffled.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  const [pendingLeft, setPendingLeft] = React.useState<string | null>(null);
+  const leftRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const rightRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const matchContainerRef = React.useRef<HTMLDivElement>(null);
+  const [lines, setLines] = React.useState<
+    { leftId: string; rightId: string; x1: number; y1: number; x2: number; y2: number }[]
+  >([]);
+
+  const recalcLines = React.useCallback(() => {
+    const container = matchContainerRef.current;
+    if (!container) return;
+    const cr = container.getBoundingClientRect();
+    setLines(
+      Object.entries(matches)
+        .map(([leftId, rightId]) => {
+          const lEl = leftRefs.current[leftId];
+          const rEl = rightRefs.current[rightId];
+          if (!lEl || !rEl) return null;
+          const lr = lEl.getBoundingClientRect();
+          const rr = rEl.getBoundingClientRect();
+          return {
+            leftId,
+            rightId,
+            x1: lr.right - cr.left,
+            y1: lr.top + lr.height / 2 - cr.top,
+            x2: rr.left - cr.left,
+            y2: rr.top + rr.height / 2 - cr.top,
+          };
+        })
+        .filter(Boolean) as typeof lines,
+    );
+  }, [matches]);
+
+  React.useEffect(() => {
+    recalcLines();
+    const obs = new ResizeObserver(recalcLines);
+    if (matchContainerRef.current) obs.observe(matchContainerRef.current);
+    return () => obs.disconnect();
+  }, [recalcLines]);
+
+  function handleClickLeft(id: string) {
+    if (disabled) return;
+    if (matches[id]) {
+      const next = { ...matches };
+      delete next[id];
+      setMatches(next);
+      onChange({ matches: next });
+      if (pendingLeft === id) setPendingLeft(null);
+      return;
     }
-    return shuffled;
+    setPendingLeft((prev) => (prev === id ? null : id));
+  }
+
+  function handleClickRight(id: string) {
+    if (disabled) return;
+    const existingLeft = Object.keys(matches).find((k) => matches[k] === id);
+    if (existingLeft && !pendingLeft) {
+      const next = { ...matches };
+      delete next[existingLeft];
+      setMatches(next);
+      onChange({ matches: next });
+      return;
+    }
+    if (!pendingLeft) return;
+    setMatches((cur) => {
+      const next = { ...cur };
+      for (const [k, v] of Object.entries(next)) {
+        if (v === id && k !== pendingLeft) delete next[k];
+      }
+      next[pendingLeft] = id;
+      onChange({ matches: next });
+      return next;
+    });
+    const lefts = config.leftItems ?? [];
+    const nextLeft = lefts.find((item) => item.id !== pendingLeft && !matches[item.id]);
+    setPendingLeft(nextLeft?.id ?? null);
+  }
+
+  // ── Hanzi Blank state ───────────────────────────────────────────────────
+  const [hanziPopupOpen, setHanziPopupOpen] = React.useState(false);
+  const hanziPopupRef = React.useRef<HTMLDivElement>(null);
+  const hanziTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const selectedLabel = typeof answer.selectedLabel === "string" ? answer.selectedLabel : null;
+  const selectedHanziText = config.choices?.find((c) => c.label === selectedLabel)?.text;
+
+  React.useEffect(() => {
+    if (!hanziPopupOpen) return;
+    function handler(e: MouseEvent) {
+      if (
+        hanziPopupRef.current && !hanziPopupRef.current.contains(e.target as Node) &&
+        hanziTriggerRef.current && !hanziTriggerRef.current.contains(e.target as Node)
+      ) {
+        setHanziPopupOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [hanziPopupOpen]);
+
+  // ── Rearrange state ──────────────────────────────────────────────────────
+  const tokens = config.tokens ?? [];
+  const shuffledAll = React.useMemo(
+    () => shuffleForSeed(tokens.map((t) => t.id), question.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [question.id],
+  );
+  const [arranged, setArranged] = React.useState<string[]>(() => {
+    const saved = answer.order as string[] | undefined;
+    return saved ?? [];
   });
+  const remaining = shuffledAll.filter((id) => !arranged.includes(id));
+
+  function addToArranged(tokenId: string) {
+    if (disabled) return;
+    const next = [...arranged, tokenId];
+    setArranged(next);
+    onChange({ order: next });
+  }
+  function removeFromArranged(index: number) {
+    if (disabled) return;
+    const next = arranged.filter((_, i) => i !== index);
+    setArranged(next);
+    onChange({ order: next });
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  const leftItems = config.leftItems ?? [];
+  const rightItems = config.rightItems ?? [];
+  const pairedCount = Object.keys(matches).length;
 
   return (
     <article className="flex flex-col gap-6 rounded-[3px] border border-border bg-surface p-4 sm:p-6">
@@ -109,51 +229,257 @@ function InteractiveQuestionView({
         <p className="font-mono text-xs text-text-muted tabular">Soal {question.number}</p>
         <p className="text-xs text-text-muted">{question.section === "listening" ? "Listening" : "Reading"}</p>
       </header>
+
+      {/* ── Hanzi Blank ────────────────────────────────────────────────── */}
       {question.questionType === "hanzi_blank" ? (
-        <div className="font-cjk text-question" lang="zh-Hans">
-          {question.prompt.split("{{blank}}").map((piece, index, all) => (
-            <React.Fragment key={index}>
-              {piece}
-              {index < all.length - 1 ? (
-                <Select
-                  aria-label="Pilih Hanzi untuk bagian kosong"
-                  value={String(answer.selectedLabel ?? "")}
-                  onChange={(event) => onChange({ selectedLabel: event.target.value })}
-                  disabled={disabled}
-                  className="mx-2 inline-block w-auto min-w-28 align-middle font-cjk text-base"
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">Klik kotak kosong untuk memilih kata Hanzi yang tepat.</p>
+          <div className="relative inline-flex items-center gap-2 font-cjk text-question" lang="zh-Hans">
+            <span>{question.prompt.split("{{blank}}")[0]}</span>
+            <button
+              ref={hanziTriggerRef}
+              type="button"
+              disabled={disabled}
+              onClick={() => !disabled && setHanziPopupOpen((v) => !v)}
+              aria-label="Pilih kata Hanzi"
+              aria-expanded={hanziPopupOpen}
+              className={cn(
+                "relative inline-flex min-w-24 items-center justify-between gap-2 rounded-[3px] border-2 px-3 py-1 font-cjk text-base transition-colors",
+                selectedLabel
+                  ? "border-primary bg-primary-subtle text-primary"
+                  : "border-border-strong bg-surface text-text-muted hover:border-primary",
+                disabled && "cursor-default opacity-70",
+              )}
+            >
+              <span>{selectedHanziText ?? "___"}</span>
+              {selectedLabel && !disabled ? (
+                <span
+                  role="button"
+                  aria-label="Hapus pilihan"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onChange({}); setHanziPopupOpen(false); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); onChange({}); setHanziPopupOpen(false); } }}
+                  className="shrink-0 rounded-sm text-primary hover:text-text"
                 >
-                  <option value="">Pilih</option>
-                  {(config.choices ?? []).map((choice) => <option key={choice.label} value={choice.label}>{choice.text}</option>)}
-                </Select>
+                  <X size={12} strokeWidth={2} aria-hidden="true" />
+                </span>
               ) : null}
-            </React.Fragment>
-          ))}
+            </button>
+            <span>{question.prompt.split("{{blank}}")[1] ?? ""}</span>
+
+            {hanziPopupOpen && !disabled ? (
+              <div
+                ref={hanziPopupRef}
+                role="listbox"
+                aria-label="Pilihan kata Hanzi"
+                className="absolute left-0 top-full z-50 mt-1 min-w-48 rounded-[3px] border border-border-strong bg-surface shadow-sm"
+              >
+                <div className="flex flex-col py-1">
+                  {(config.choices ?? []).map((choice, idx) => (
+                    <button
+                      key={choice.label}
+                      type="button"
+                      role="option"
+                      aria-selected={selectedLabel === choice.label}
+                      onClick={() => { onChange({ selectedLabel: choice.label }); setHanziPopupOpen(false); }}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 text-left font-cjk text-sm transition-colors",
+                        selectedLabel === choice.label ? "bg-primary-subtle text-primary" : "hover:bg-surface-muted",
+                      )}
+                    >
+                      <span className="shrink-0 font-mono text-xs text-text-muted">{String.fromCharCode(65 + idx)}.</span>
+                      <span lang="zh-Hans">{choice.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : (
         <p className="font-cjk text-question" lang="zh-Hans">{question.prompt}</p>
       )}
 
+      {/* ── Matching ────────────────────────────────────────────────────── */}
       {question.questionType === "matching" ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-3">{(config.leftItems ?? []).map((item, index) => <Field key={item.id} label={`${index + 1}. ${item.text}`} htmlFor={`matching-${question.id}-${item.id}`}><Select id={`matching-${question.id}-${item.id}`} value={matching[item.id] ?? ""} disabled={disabled} onChange={(event) => { const next = { ...matching, [item.id]: event.target.value }; setMatching(next); onChange({ matches: next }); }}><option value="">Pilih pasangan</option>{(config.rightItems ?? []).map((right) => <option key={right.id} value={right.id} disabled={Object.entries(matching).some(([leftId, rightId]) => leftId !== item.id && rightId === right.id)}>{right.text}</option>)}</Select></Field>)}</div>
-          <div className="flex flex-col gap-3"><p className="text-xs text-text-muted">Pilihan pasangan</p>{(config.rightItems ?? []).map((item, index) => <div key={item.id} className="min-h-10 border border-border bg-surface-muted px-3 py-2 font-cjk text-sm" lang="zh-Hans">{String.fromCharCode(65 + index)}. {item.text}</div>)}</div>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">
+            Klik item kiri, lalu klik pasangannya di kanan. Klik item yang sudah terpasang untuk melepasnya.
+          </p>
+          <p className="text-xs font-medium text-text">{pairedCount} dari {leftItems.length} pasangan terisi</p>
+
+          <div ref={matchContainerRef} className="relative">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
+              <defs>
+                <marker id={`arrow-${question.id}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L6,3 z" fill="var(--color-primary,#5a7a5a)" />
+                </marker>
+              </defs>
+              {lines.map((line) => (
+                <line
+                  key={`${line.leftId}-${line.rightId}`}
+                  x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+                  stroke="var(--color-primary,#5a7a5a)"
+                  strokeWidth={2}
+                  markerEnd={`url(#arrow-${question.id})`}
+                />
+              ))}
+            </svg>
+
+            <div className="grid grid-cols-2 gap-x-10 gap-y-2">
+              <div className="flex flex-col gap-2">
+                {leftItems.map((item, idx) => {
+                  const isPaired = Boolean(matches[item.id]);
+                  const isPending = pendingLeft === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      ref={(el) => { leftRefs.current[item.id] = el; }}
+                      type="button"
+                      onClick={() => handleClickLeft(item.id)}
+                      disabled={disabled}
+                      aria-pressed={isPending}
+                      className={cn(
+                        "flex min-h-11 w-full items-center gap-2 rounded-[3px] border-2 px-3 py-2 text-left text-sm transition-colors",
+                        isPending ? "border-primary bg-primary-subtle"
+                          : isPaired ? "border-primary/40 bg-primary-subtle/40"
+                            : "border-border-strong bg-surface hover:border-primary hover:bg-surface-muted",
+                        disabled && "cursor-default",
+                      )}
+                    >
+                      <span className="shrink-0 font-mono text-xs text-text-muted">{idx + 1}.</span>
+                      <span className="font-cjk" lang="zh-Hans">{item.text}</span>
+                      {isPaired ? (
+                        <span className="ml-auto shrink-0 font-mono text-xs font-bold text-primary">
+                          {String.fromCharCode(65 + rightItems.findIndex((r) => r.id === matches[item.id]))}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-col gap-2">
+                {rightItems.map((item, idx) => {
+                  const isMatchedByPending = pendingLeft ? matches[pendingLeft] === item.id : false;
+                  const isUsed = Object.values(matches).includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      ref={(el) => { rightRefs.current[item.id] = el; }}
+                      type="button"
+                      onClick={() => handleClickRight(item.id)}
+                      disabled={disabled}
+                      aria-pressed={isMatchedByPending}
+                      className={cn(
+                        "flex min-h-11 w-full items-center gap-2 rounded-[3px] border-2 px-3 py-2 text-left text-sm transition-colors",
+                        isMatchedByPending ? "border-primary bg-primary-subtle"
+                          : isUsed ? "border-primary/40 bg-primary-subtle/40"
+                            : pendingLeft ? "border-border-strong bg-surface hover:border-primary hover:bg-surface-muted"
+                              : "border-border-strong bg-surface",
+                        disabled && "cursor-default",
+                      )}
+                    >
+                      <span className="shrink-0 font-mono text-xs font-semibold text-text-muted">{String.fromCharCode(65 + idx)}.</span>
+                      <span className="font-cjk" lang="zh-Hans">{item.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {pairedCount > 0 && !disabled ? (
+            <div>
+              <Button type="button" variant="secondary" size="sm"
+                onClick={() => { setPendingLeft(null); setMatches({}); onChange({ matches: {} }); }}
+                disabled={disabled}
+              >
+                Hapus semua pasangan
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
+      {/* ── Rearrange ───────────────────────────────────────────────────── */}
       {question.questionType === "rearrange_sentence" ? (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs text-text-muted">Seret potongan untuk menyusun kalimat.</p>
-          {order.map((tokenId, index) => {
-            const token = (config.tokens ?? []).find((item) => item.id === tokenId);
-            if (!token) return null;
-            return <div key={token.id} draggable={!disabled} onDragStart={(event) => event.dataTransfer.setData("text/plain", token.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const fromId = event.dataTransfer.getData("text/plain"); const from = order.indexOf(fromId); if (from < 0) return; const next = [...order]; const [moved] = next.splice(from, 1); next.splice(index, 0, moved); setOrder(next); onChange({ order: next }); }} className="flex min-h-12 items-center gap-3 border border-border-strong bg-surface px-3 py-2"><span className="font-mono text-xs text-text-muted">{index + 1}</span><span className="font-cjk text-option" lang="zh-Hans">{token.text}</span></div>;
-          })}
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-text-muted">
+            Klik kata untuk menyusun kalimat. Klik kata di susunan untuk mengembalikannya.
+          </p>
+
+          {/* Slot susunan */}
+          <div className="flex min-h-14 flex-wrap items-center gap-2 rounded-[3px] border-2 border-dashed border-border-strong bg-surface-muted p-3">
+            {arranged.length === 0 ? (
+              <span className="text-xs text-text-muted">Susunan kalimat muncul di sini...</span>
+            ) : (
+              arranged.map((tokenId, idx) => {
+                const token = tokens.find((t) => t.id === tokenId);
+                if (!token) return null;
+                return (
+                  <button
+                    key={`${tokenId}-${idx}`}
+                    type="button"
+                    onClick={() => removeFromArranged(idx)}
+                    disabled={disabled}
+                    title="Klik untuk kembalikan"
+                    className={cn(
+                      "flex items-center gap-1 rounded-[3px] border border-primary bg-primary-subtle px-3 py-1 font-cjk text-sm text-primary transition-colors",
+                      !disabled && "hover:bg-primary hover:text-white",
+                      disabled && "cursor-default opacity-70",
+                    )}
+                    lang="zh-Hans"
+                  >
+                    <span className="font-mono text-xs opacity-60">{idx + 1}.</span>
+                    {token.text}
+                    {!disabled ? <X size={11} strokeWidth={2.5} aria-hidden="true" className="ml-1 opacity-60" /> : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Chip yang belum dipakai */}
+          <div className="flex flex-wrap gap-2">
+            {remaining.map((tokenId) => {
+              const token = tokens.find((t) => t.id === tokenId);
+              if (!token) return null;
+              return (
+                <button
+                  key={tokenId}
+                  type="button"
+                  onClick={() => addToArranged(tokenId)}
+                  disabled={disabled}
+                  className={cn(
+                    "rounded-[3px] border border-border-strong bg-surface px-3 py-1 font-cjk text-sm transition-colors",
+                    !disabled && "hover:border-primary hover:bg-primary-subtle hover:text-primary",
+                    disabled && "cursor-default opacity-70",
+                  )}
+                  lang="zh-Hans"
+                >
+                  {token.text}
+                </button>
+              );
+            })}
+            {remaining.length === 0 && arranged.length > 0 ? (
+              <span className="text-xs text-text-muted">Semua kata sudah tersusun.</span>
+            ) : null}
+          </div>
+
+          {arranged.length > 0 && !disabled ? (
+            <div>
+              <Button type="button" variant="secondary" size="sm"
+                onClick={() => { setArranged([]); onChange({ order: [] }); }}
+              >
+                Ulangi dari awal
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </article>
   );
 }
-
 export function TakeClient({
   attemptId,
   testId,
