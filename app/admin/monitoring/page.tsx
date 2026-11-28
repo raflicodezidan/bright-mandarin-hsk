@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TeacherStudentMonitor } from "@/components/admin/reports/teacher-student-monitor";
+import { OwnerAnalyticsChart } from "@/components/admin/reports/owner-analytics-chart";
 
 export const metadata = {
   title: "Pantau Nilai Murid · Bright Mandarin",
@@ -225,7 +226,13 @@ export default async function OwnerMonitoringPage() {
             description="Tambahkan guru dan tugaskan murid untuk mulai memantau laporan nilai."
           />
         ) : (
-          <TeacherStudentMonitor data={teacherMonitorList} />
+          <>
+            {/* Grafik Utama: Perbandingan Guru & Tren Waktu */}
+            <OwnerAnalyticsChart teachers={teacherMonitorList} />
+
+            {/* Hierarki Guru -> Murid */}
+            <TeacherStudentMonitor data={teacherMonitorList} />
+          </>
         )}
       </div>
     </>
